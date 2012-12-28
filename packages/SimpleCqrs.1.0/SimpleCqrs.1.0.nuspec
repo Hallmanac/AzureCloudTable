@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
+  <metadata>
+    <id>SimpleCqrs</id>
+    <version>1.0</version>
+    <title>SimpleCqrs</title>
+    <authors>Tyrone Groves, Darren Cauthen</authors>
+    <owners>Tyrone Groves, Darren Cauthen</owners>
+    <projectUrl>https://github.com/tyronegroves/SimpleCQRS</projectUrl>
+    <iconUrl>https://nugetgallery.blob.core.windows.net/icons/SimpleCqrs.1.0.png</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A framework for building applications using the CQRS and Event Sourcing patterns.</description>
+    <summary>A framework for building applications using the CQRS and Event Sourcing patterns</summary>
+    <references>
+      <reference file="SimpleCqrs.dll" />
+    </references>
+  </metadata>
+</package>
