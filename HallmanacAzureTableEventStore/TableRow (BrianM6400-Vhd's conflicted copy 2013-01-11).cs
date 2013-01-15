@@ -9,14 +9,6 @@ namespace HallmanacAzureTable.EventStore
 {
     public class TableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
-        //CreatePartitionIndexByProperty(PropertyInfo propInfo, string rowKey = null) --> The PartitionKey would be the value of the property
-        //(up to 1000 characters) and the default RowKey would be the AggregateID (unless that's the mapped partition key) then it would be a date-time ticks.
-
-        //CreateCustomPartitionIndex(string customPartitionKey, string customRowKey = null) --> This might require some rethinking since you would 
-        //essentially have to query each entity as it's being written to see if it meets the index parameters. That seems like it would be difficult.
-        
-        private readonly CloudStorageAccount _storageAccount;
-        
         public TableRow()
         {
             PartitionKey = SetDefaultPartitionKey();
@@ -26,7 +18,7 @@ namespace HallmanacAzureTable.EventStore
             Metadata = new Dictionary<string, object>();
         }
 
-        public TableRow(CloudStorageAccount storageAccount, string partitionKey = null, string rowKey = null, TDomainObject domainObject = null,
+        public TableRow(string partitionKey = null, string rowKey = null, TDomainObject domainObject = null,
             bool isMappedAsFatEntity = false)
         {
             PartitionKey = partitionKey ?? SetDefaultPartitionKey();
@@ -34,8 +26,6 @@ namespace HallmanacAzureTable.EventStore
             DomainObjectInstance = domainObject ?? new TDomainObject();
             IsMappedAsFatEntity = isMappedAsFatEntity;
             Metadata = new Dictionary<string, object>();
-            _storageAccount = storageAccount;
-            QueryContext = new AzureTableContext<TableRow<TDomainObject>>(storageAccount);
         }
 
         /// <summary>
@@ -71,7 +61,7 @@ namespace HallmanacAzureTable.EventStore
         {
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyIsValidForEntity(propertyInfo))
+                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
                     return;
                 EntityProperty entityProperty = properties[propertyInfo.Name];
                 if(entityProperty == null)
@@ -97,7 +87,7 @@ namespace HallmanacAzureTable.EventStore
             var regularEntityDictionary = new Dictionary<string, EntityProperty>();
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyIsValidForEntity(propertyInfo))
+                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
                     continue;
                 EntityProperty entityFromProperty = null;
                 try
@@ -163,7 +153,8 @@ namespace HallmanacAzureTable.EventStore
             return typeof(TDomainObject).Name;
         }
 
-        private IDictionary<string, EntityProperty> WriteFatEntity(Dictionary<string, EntityProperty> regularEntityDictionary)
+        private IDictionary<string, EntityProperty> WriteFatEntity(
+            Dictionary<string, EntityProperty> regularEntityDictionary)
         {
             var fatEntityDictionary = new Dictionary<string, EntityProperty>();
             string serializedDictionary = JsonSerializer.SerializeToString(regularEntityDictionary,
@@ -186,7 +177,7 @@ namespace HallmanacAzureTable.EventStore
             return fatEntityDictionary;
         }
 
-        private bool PropertyIsValidForEntity(PropertyInfo propertyInfo)
+        private bool PropertyInfoIsValidForEntity(PropertyInfo propertyInfo)
         {
             return (propertyInfo.GetGetMethod() != null || propertyInfo.GetGetMethod().IsPublic ||
                 propertyInfo.GetSetMethod() != null || propertyInfo.GetSetMethod().IsPublic);

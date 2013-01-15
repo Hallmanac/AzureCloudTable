@@ -7,32 +7,23 @@ using ServiceStack.Text;
 
 namespace HallmanacAzureTable.EventStore
 {
-    public class TableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
+    public class FatTableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
-        //CreatePartitionIndexByProperty(PropertyInfo propInfo, string rowKey = null) --> The PartitionKey would be the value of the property
-        //(up to 1000 characters) and the default RowKey would be the AggregateID (unless that's the mapped partition key) then it would be a date-time ticks.
-
-        //CreateCustomPartitionIndex(string customPartitionKey, string customRowKey = null) --> This might require some rethinking since you would 
-        //essentially have to query each entity as it's being written to see if it meets the index parameters. That seems like it would be difficult.
-        
         private readonly CloudStorageAccount _storageAccount;
         
-        public TableRow()
+        public FatTableRow()
         {
             PartitionKey = SetDefaultPartitionKey();
             RowKey = SetDefaultRowKey();
             DomainObjectInstance = new TDomainObject();
-            IsMappedAsFatEntity = false;
             Metadata = new Dictionary<string, object>();
         }
 
-        public TableRow(CloudStorageAccount storageAccount, string partitionKey = null, string rowKey = null, TDomainObject domainObject = null,
-            bool isMappedAsFatEntity = false)
+        public FatTableRow(CloudStorageAccount storageAccount, string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
         {
             PartitionKey = partitionKey ?? SetDefaultPartitionKey();
             RowKey = rowKey ?? SetDefaultRowKey();
             DomainObjectInstance = domainObject ?? new TDomainObject();
-            IsMappedAsFatEntity = isMappedAsFatEntity;
             Metadata = new Dictionary<string, object>();
             _storageAccount = storageAccount;
             QueryContext = new AzureTableContext<TableRow<TDomainObject>>(storageAccount);
@@ -50,8 +41,6 @@ namespace HallmanacAzureTable.EventStore
         ///     without having to modify the TDomainObject for storage purposes.
         /// </summary>
         public Dictionary<string, Object> Metadata {get; private set; }
-
-        public bool IsMappedAsFatEntity { get; set; }
 
         public string NameOfPropertyMappedToPartitionKey { get; private set; }
         public string NameOfPropertyMappedToRowKey { get; private set; }
@@ -71,7 +60,7 @@ namespace HallmanacAzureTable.EventStore
         {
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyIsValidForEntity(propertyInfo))
+                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
                     return;
                 EntityProperty entityProperty = properties[propertyInfo.Name];
                 if(entityProperty == null)
@@ -97,7 +86,7 @@ namespace HallmanacAzureTable.EventStore
             var regularEntityDictionary = new Dictionary<string, EntityProperty>();
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyIsValidForEntity(propertyInfo))
+                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
                     continue;
                 EntityProperty entityFromProperty = null;
                 try
@@ -107,7 +96,6 @@ namespace HallmanacAzureTable.EventStore
                 }
                 catch(SerializedEntityPropertySizeException entityPropertySizeException)
                 {
-                    IsMappedAsFatEntity = true;
                     entityFromProperty = new EntityProperty(entityPropertySizeException.Entity);
                 }
                 finally
@@ -163,7 +151,8 @@ namespace HallmanacAzureTable.EventStore
             return typeof(TDomainObject).Name;
         }
 
-        private IDictionary<string, EntityProperty> WriteFatEntity(Dictionary<string, EntityProperty> regularEntityDictionary)
+        private IDictionary<string, EntityProperty> WriteFatEntity(
+            Dictionary<string, EntityProperty> regularEntityDictionary)
         {
             var fatEntityDictionary = new Dictionary<string, EntityProperty>();
             string serializedDictionary = JsonSerializer.SerializeToString(regularEntityDictionary,
@@ -186,7 +175,7 @@ namespace HallmanacAzureTable.EventStore
             return fatEntityDictionary;
         }
 
-        private bool PropertyIsValidForEntity(PropertyInfo propertyInfo)
+        private bool PropertyInfoIsValidForEntity(PropertyInfo propertyInfo)
         {
             return (propertyInfo.GetGetMethod() != null || propertyInfo.GetGetMethod().IsPublic ||
                 propertyInfo.GetSetMethod() != null || propertyInfo.GetSetMethod().IsPublic);
@@ -429,18 +418,5 @@ namespace HallmanacAzureTable.EventStore
             }
             return new EntityProperty(string.Empty);
         }
-    }
-
-    public class SerializedEntityPropertySizeException : ApplicationException
-    {
-        public SerializedEntityPropertySizeException() {}
-
-        public SerializedEntityPropertySizeException(string message, string entity)
-            : base(message)
-        {
-            Entity = entity;
-        }
-
-        public string Entity { get; private set; }
     }
 }

@@ -35,7 +35,6 @@ namespace HallmanacAzureTable.EventStore
             EntityContextId = entityContextId;
             DomainObject = domainObject;
             Init(storageAccount);
-            EntityProperty 
         }
 
         private void Init(CloudStorageAccount storageAccount)
@@ -58,8 +57,6 @@ namespace HallmanacAzureTable.EventStore
                 string newString = memoryStream.WriteToUtf8String();
 
             }
-
-        _partitionTypeContext = new AzureTableContext<PartitionedType>(storageAccount, _rootEntityTableName);
         }
     }
 }

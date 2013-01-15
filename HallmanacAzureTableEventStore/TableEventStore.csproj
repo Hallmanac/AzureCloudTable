@@ -65,6 +65,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CloudTableEntity.cs" />
+    <Compile Include="FatTableRow.cs" />
     <Compile Include="PartitionedAggregateVersion.cs" />
     <Compile Include="AzureTableContext.cs" />
     <Compile Include="DomainEventTableEntity.cs" />

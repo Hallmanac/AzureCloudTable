@@ -9,11 +9,15 @@ namespace HallmanacAzureTable.EventStore
     public class TableEventStore : IEventStore
     {
         private readonly IEntityTableMapper<DomainEvent, DomainEventTableEntity> _domainEventMapper;
+        
+        private AzureTableContext<TableRow<DomainEvent>> _domainEventTableContext;
 
         public TableEventStore(string connectionString)
         {
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(connectionString);
+            var domainEventRow = new TableRow<DomainEvent>();
             _domainEventMapper = new DomainEventTableMapper(storageAccount);
+            _domainEventTableContext = new AzureTableContext<TableRow<DomainEvent>>(storageAccount, "DomainEventTable");
         }
 
         public TableEventStore()
@@ -25,12 +29,11 @@ namespace HallmanacAzureTable.EventStore
 
         public IEnumerable<DomainEvent> GetEvents(Guid aggregateRootId = default(Guid), int startSequence = 0)
         {
+            _domainEventTableContext.
+            
             string aggregateRootToString = aggregateRootId.ToString();
             string startSequenceToString = string.Format("{0}_{1}",
-                startSequence.ToString(
-                                       DomainEventTableMapper
-                                           .RowKeyNumberPaddingFormatter),
-                default(Guid).ToString());
+                startSequence.ToString(DomainEventTableMapper.RowKeyNumberPaddingFormatter), default(Guid).ToString());
             IEnumerable<DomainEventTableEntity> tableEntities = startSequence == 0
                 ? _domainEventMapper.RootEntityContext
                     .GetByPartitionKey(
@@ -39,15 +42,28 @@ namespace HallmanacAzureTable.EventStore
                     .GetByPartitionKeyWithRowKeyRange
                     (aggregateRootToString,
                         startSequenceToString);
+            return null;
         }
 
-        public void Insert(IEnumerable<DomainEvent> domainEvents) { throw new NotImplementedException(); }
+        public void Insert(IEnumerable<DomainEvent> domainEvents)
+        {
+            throw new NotImplementedException();
+        }
 
-        public IEnumerable<DomainEvent> GetEventsByEventTypes(IEnumerable<Type> domainEventTypes) { throw new NotImplementedException(); }
+        public IEnumerable<DomainEvent> GetEventsByEventTypes(IEnumerable<Type> domainEventTypes)
+        {
+            throw new NotImplementedException();
+        }
 
-        public IEnumerable<DomainEvent> GetEventsByEventTypes(IEnumerable<Type> domainEventTypes, Guid aggregateRootId) { throw new NotImplementedException(); }
+        public IEnumerable<DomainEvent> GetEventsByEventTypes(IEnumerable<Type> domainEventTypes, Guid aggregateRootId)
+        {
+            throw new NotImplementedException();
+        }
 
         public IEnumerable<DomainEvent> GetEventsByEventTypes(IEnumerable<Type> domainEventTypes, DateTime startDate,
-            DateTime endDate) { throw new NotImplementedException(); }
+            DateTime endDate)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
