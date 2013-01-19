@@ -1,32 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.Serialization.Formatters.Binary;
+using System.Text;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
 namespace HallmanacAzureTable.EventStore
 {
-    public class FatTableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
+    public class AzureTableEntity<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
         private readonly CloudStorageAccount _storageAccount;
         
-        public FatTableRow()
+        public AzureTableEntity()
         {
             PartitionKey = SetDefaultPartitionKey();
             RowKey = SetDefaultRowKey();
             DomainObjectInstance = new TDomainObject();
-            Metadata = new Dictionary<string, object>();
         }
 
-        public FatTableRow(CloudStorageAccount storageAccount, string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
+        public AzureTableEntity(string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
         {
             PartitionKey = partitionKey ?? SetDefaultPartitionKey();
             RowKey = rowKey ?? SetDefaultRowKey();
             DomainObjectInstance = domainObject ?? new TDomainObject();
-            Metadata = new Dictionary<string, object>();
-            _storageAccount = storageAccount;
-            QueryContext = new AzureTableContext<TableRow<TDomainObject>>(storageAccount);
         }
 
         /// <summary>
@@ -34,30 +32,14 @@ namespace HallmanacAzureTable.EventStore
         /// </summary>
         public TDomainObject DomainObjectInstance { get; set; }
 
-        public AzureTableContext<TableRow<TDomainObject>> QueryContext { get; set; }
-
-        /// <summary>
-        ///     Dictionary property used to add additional metadata related to the storing of the TDomainObject
-        ///     without having to modify the TDomainObject for storage purposes.
-        /// </summary>
-        public Dictionary<string, Object> Metadata {get; private set; }
-
-        public string NameOfPropertyMappedToPartitionKey { get; private set; }
-        public string NameOfPropertyMappedToRowKey { get; private set; }
-
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }
         public DateTimeOffset Timestamp { get; set; }
         public string ETag { get; set; }
 
-        public void AddMetadata(KeyValuePair<string, Object> keyValuePair)
-        {
-            //double check to make sure that the DomainObjectInstance doesn't have a property with the same name
-            //If not, add the pair to _metadata
-        }
-
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
+            #region Old Way
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
                 if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
@@ -77,13 +59,16 @@ namespace HallmanacAzureTable.EventStore
                 var domainObjectProperty = typeof(TDomainObject).GetProperty(entityProperty.Key);
                 if(domainObjectProperty != null) continue;
                 if(IsNativeTableProperty(entityProperty.Key)) continue;
-                SetMetadataFromEntityProperty(entityProperty);
             }
+            #endregion
+
+            ReadFatEntity(properties);
         }
 
         public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
         {
-            var regularEntityDictionary = new Dictionary<string, EntityProperty>();
+            #region Old way
+            /*var regularEntityDictionary = new Dictionary<string, EntityProperty>();
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
                 if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
@@ -106,93 +91,9 @@ namespace HallmanacAzureTable.EventStore
                         regularEntityDictionary.Add(propertyInfo.Name, entityFromProperty);
                     }
                 }
-            }
-            foreach(var entityProperty in Metadata)
-            {
-                if(!regularEntityDictionary.ContainsKey(entityProperty.Key))
-                {
-                    EntityProperty entityPropertyFromMetadata = null;
-                    try
-                    {
-                        entityPropertyFromMetadata = CreateEntityPropertyFromObject(entityProperty.Value,
-                            true);
-                    }
-                    catch(SerializedEntityPropertySizeException entityPropertySizeException)
-                    {
-                        IsMappedAsFatEntity = true;
-                        entityPropertyFromMetadata = new EntityProperty(entityPropertySizeException.Entity);
-                    }
-                    finally
-                    {
-                        if(entityPropertyFromMetadata == null) {}
-                        else
-                        {
-                            regularEntityDictionary.Add(entityProperty.Key, entityPropertyFromMetadata);
-                        }
-                    }
-                }
-            }
-            if(IsMappedAsFatEntity)
-            {
-                return WriteFatEntity(regularEntityDictionary);
-            }
-            return regularEntityDictionary;
-        }
-
-        private string SetDefaultRowKey()
-        {
-            string defaultRowKeyByTime = string.Format("{0:d19}",
-                (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks));
-            return defaultRowKeyByTime + "_" + Guid.NewGuid().SerializeToString();
-        }
-
-        private string SetDefaultPartitionKey()
-        {
-            return typeof(TDomainObject).Name;
-        }
-
-        private IDictionary<string, EntityProperty> WriteFatEntity(
-            Dictionary<string, EntityProperty> regularEntityDictionary)
-        {
-            var fatEntityDictionary = new Dictionary<string, EntityProperty>();
-            string serializedDictionary = JsonSerializer.SerializeToString(regularEntityDictionary,
-                typeof(Dictionary<string, EntityProperty>));
-            int maxStringSize = 64000;
-            int stringLength = serializedDictionary.Length;
-            int dictionaryCount = fatEntityDictionary.Count;
-            for(int i = 0;i < stringLength;i += maxStringSize)
-            {
-                if((i + maxStringSize) > stringLength)
-                    maxStringSize = stringLength - i;
-                string entityValue = serializedDictionary.Substring(i, maxStringSize);
-                string entityKey = string.Format("{0:D2}", dictionaryCount);
-                if(fatEntityDictionary.Count < 16)
-                {
-                    fatEntityDictionary.Add(entityKey, new EntityProperty(entityValue));
-                }
-                dictionaryCount++;
-            }
-            return fatEntityDictionary;
-        }
-
-        private bool PropertyInfoIsValidForEntity(PropertyInfo propertyInfo)
-        {
-            return (propertyInfo.GetGetMethod() != null || propertyInfo.GetGetMethod().IsPublic ||
-                propertyInfo.GetSetMethod() != null || propertyInfo.GetSetMethod().IsPublic);
-        }
-
-        public void MapPropertyValueToPartitionKey(PropertyInfo givenPropertyInfo)
-        {
-            if(DomainObjectInstance != null)
-                foreach(PropertyInfo propInfo in DomainObjectInstance.GetType().GetProperties())
-                {
-                    if(String.Equals(propInfo.Name, givenPropertyInfo.Name))
-                    {
-                        object propertyValue = propInfo.GetValue(DomainObjectInstance);
-                        PartitionKey = JsonSerializer.SerializeToString(propertyValue, typeof(Object));
-                        NameOfPropertyMappedToPartitionKey = givenPropertyInfo.Name;
-                    }
-                }
+            }*/
+            #endregion
+            return WriteFatEntity(DomainObjectInstance);
         }
 
         public void MapPropertyNameToPartitionKey(PropertyInfo givenPropertyInfo)
@@ -204,10 +105,22 @@ namespace HallmanacAzureTable.EventStore
                     if(String.Equals(propertyInfo.Name, givenPropertyInfo.Name))
                     {
                         PartitionKey = givenPropertyInfo.Name;
-                        NameOfPropertyMappedToPartitionKey = givenPropertyInfo.Name;
                     }
                 }
             }
+        }
+
+        public void MapPropertyValueToPartitionKey(PropertyInfo givenPropertyInfo)
+        {
+            if(DomainObjectInstance != null)
+                foreach(PropertyInfo propInfo in DomainObjectInstance.GetType().GetProperties())
+                {
+                    if(String.Equals(propInfo.Name, givenPropertyInfo.Name))
+                    {
+                        object propertyValue = propInfo.GetValue(DomainObjectInstance);
+                        PartitionKey = JsonSerializer.SerializeToString(propertyValue, typeof(Object));
+                    }
+                }
         }
 
         public void MapPropertyValueToRowKey(PropertyInfo givenPropertyInfo)
@@ -220,7 +133,6 @@ namespace HallmanacAzureTable.EventStore
                     {
                         object propertyValue = propertyInfo.GetValue(DomainObjectInstance);
                         RowKey = JsonSerializer.SerializeToString(propertyValue, typeof(Object));
-                        NameOfPropertyMappedToRowKey = givenPropertyInfo.Name;
                     }
                 }
             }
@@ -235,10 +147,66 @@ namespace HallmanacAzureTable.EventStore
                     if(String.Equals(propertyInfo.Name, givenPropertyInfo.Name))
                     {
                         RowKey = givenPropertyInfo.Name;
-                        NameOfPropertyMappedToRowKey = givenPropertyInfo.Name;
                     }
                 }
             }
+        }
+
+        private string SetDefaultRowKey()
+        {
+            string defaultRowKeyByTime = string.Format("{0:d19}",
+                (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks));
+            return defaultRowKeyByTime + "_" + Guid.NewGuid().SerializeToString();
+        }
+
+        private string SetDefaultPartitionKey()
+        {
+            return typeof(TDomainObject).Name;
+        }
+
+        private void ReadFatEntity(IEnumerable<KeyValuePair<string, EntityProperty>> entityProperties)
+        {
+            var combinedFatEntity = new StringBuilder();
+            foreach(var entityProperty in entityProperties)
+            {
+                if(IsNativeTableProperty(entityProperty.Key))
+                    continue;
+                combinedFatEntity.Append(entityProperty.Value);
+            }
+            var fatEntityString = combinedFatEntity.ToString();
+            var transitionObject = fatEntityString.FromJsv<Object>();
+            DomainObjectInstance = transitionObject as TDomainObject;
+        }
+
+        private IDictionary<string, EntityProperty> WriteFatEntity(object givenObject)
+        {
+            var fatEntityDictionary = new Dictionary<string, EntityProperty>();
+
+            string serializedObject = givenObject.ToJsv();
+            int maxStringSize = 63997; //This is a "just in case". I found that when an object is serialized to a UTF-8 encoded 
+                                       //string and is saved to a txt file it eats up an additional 3 Bytes. Probably over thinking
+                                       //this but hey, that's how I roll.
+            int stringLength = serializedObject.Length;
+            int dictionaryCount = fatEntityDictionary.Count;
+            for(int i = 0;i < stringLength;i += maxStringSize)
+            {
+                if((i + maxStringSize) > stringLength)
+                    maxStringSize = stringLength - i;
+                string entityValue = serializedObject.Substring(i, maxStringSize);
+                string entityKey = string.Format("{0:D2}", dictionaryCount);
+                if(fatEntityDictionary.Count < 16)
+                {
+                    fatEntityDictionary.Add(entityKey, new EntityProperty(entityValue));
+                }
+                dictionaryCount++;
+            }
+            return fatEntityDictionary;
+        }
+
+        private bool PropertyInfoIsValidForEntity(PropertyInfo propertyInfo)
+        {
+            return (propertyInfo.GetGetMethod() != null || propertyInfo.GetGetMethod().IsPublic ||
+                propertyInfo.GetSetMethod() != null || propertyInfo.GetSetMethod().IsPublic);
         }
 
         private bool IsNativeTableProperty(string propertyName)
@@ -345,42 +313,6 @@ namespace HallmanacAzureTable.EventStore
                     var deserializedFromString = JsonSerializer.DeserializeFromString<Object>(entityProperty.StringValue);
                     propertyInfo.SetValue(DomainObjectInstance,
                         Convert.ChangeType(deserializedFromString, propertyInfo.PropertyType));
-                    return;
-            }
-        }
-
-        private void SetMetadataFromEntityProperty(KeyValuePair<string, EntityProperty> entityProperty)
-        {
-            switch(entityProperty.Value.PropertyType)
-            {
-                case EdmType.String:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.Binary:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.Boolean:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.DateTime:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.Double:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.Guid:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.Int32:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                case EdmType.Int64:
-                    Metadata.Add(entityProperty.Key, entityProperty.Value);
-                    return;
-                default:
-                    var deserializedFromString =
-                        JsonSerializer.DeserializeFromString<Object>(entityProperty.Value.StringValue);
-                    Metadata.Add(entityProperty.Key, deserializedFromString);
                     return;
             }
         }

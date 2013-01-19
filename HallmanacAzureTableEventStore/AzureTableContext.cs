@@ -28,7 +28,7 @@ namespace HallmanacAzureTable.EventStore
             _table.CreateIfNotExists();
         }
 
-        public TableRow<TEntity> TableRow { get; private set; } 
+        public AzureTableEntity<TEntity> TableRow { get; private set; } 
 
         public void InsertTableEntity(TEntity tableEntity)
         {

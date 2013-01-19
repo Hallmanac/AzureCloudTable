@@ -7,6 +7,12 @@ using ServiceStack.Text;
 
 namespace HallmanacAzureTable.EventStore
 {
+    /// <summary>
+    /// WARNING: This implementation has issues and is not complete. Use for research purposes or finish the implementation. --- 
+    /// This class breaks apart an object into EntityProperties if possible. If the property is another Class type (i.e. reference object) then
+    /// that property is serialized as JSON and stored as a string in Table storage as long as it fits within the 64KB limit.
+    /// </summary>
+    /// <typeparam name="TDomainObject"></typeparam>
     public class TableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
         //CreatePartitionIndexByProperty(PropertyInfo propInfo, string rowKey = null) --> The PartitionKey would be the value of the property
