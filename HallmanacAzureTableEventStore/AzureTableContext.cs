@@ -5,14 +5,14 @@ using Microsoft.WindowsAzure.Storage.Table;
 
 namespace HallmanacAzureTable.EventStore
 {
-    public class AzureTableContext<TEntity> where TEntity : class, new()
+    public class AzureTableContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {
         private readonly CloudTable _table;
         private readonly CloudStorageAccount _storageAccount;
 
         public AzureTableContext(CloudStorageAccount storageAccount)
         {
-            var tableName = string.Format("{0}Table", typeof(TEntity).Name);
+            var tableName = string.Format("{0}Table", typeof(TAzureTableEntity).Name);
             _storageAccount = storageAccount;
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
@@ -21,27 +21,25 @@ namespace HallmanacAzureTable.EventStore
         
         public AzureTableContext(CloudStorageAccount storageAccount, string tableName)
         {
-            tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TEntity).Name) : tableName;
+            tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TAzureTableEntity).Name) : tableName;
             _storageAccount = storageAccount;
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
         }
 
-        public AzureTableEntity<TEntity> TableRow { get; private set; } 
-
-        public void InsertTableEntity(TEntity tableEntity)
+        public void InsertTableEntity(TAzureTableEntity tableEntity)
         {
             var insertTableEntity = TableOperation.Insert(tableEntity);
             _table.Execute(insertTableEntity);
         }
 
-        public void BatchInsertTableEntities(TEntity[] entities)
+        public void BatchInsertTableEntities(TAzureTableEntity[] entities)
         {
             if(entities.Length <= 100)
             {
                 var batchOperationForInsert = new TableBatchOperation();
-                foreach(TEntity entity in entities)
+                foreach(TAzureTableEntity entity in entities)
                 {
                     batchOperationForInsert.Insert(entity);
                 }
@@ -52,14 +50,14 @@ namespace HallmanacAzureTable.EventStore
                 var processIncrement = 0;
                 while(processIncrement <= entities.Length)
                 {
-                    var batchOf100 = new TEntity[100];
+                    var batchOf100 = new TAzureTableEntity[100];
                     var batchOperationForInsert = new TableBatchOperation();
                     for(int i = 0;i < 100;i++)
                     {
                         batchOf100[i] = entities[processIncrement];
                         processIncrement++;
                     }
-                    foreach(TEntity entity in batchOf100)
+                    foreach(TAzureTableEntity entity in batchOf100)
                     {
                         batchOperationForInsert.Insert(entity);
                     }
@@ -68,18 +66,18 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public void InsertOrMergeTableEntity(TEntity tableEntity)
+        public void InsertOrMergeTableEntity(TAzureTableEntity tableEntity)
         {
             TableOperation updateOperation = TableOperation.InsertOrMerge(tableEntity);
             _table.Execute(updateOperation);
         }
 
-        public void BatchInsertOrMergeTableEntity(TEntity[] entities)
+        public void BatchInsertOrMergeTableEntity(TAzureTableEntity[] entities)
         {
             if(entities.Length <= 100)
             {
                 var batchOperationForInsertOrMerge = new TableBatchOperation();
-                foreach(TEntity entity in entities)
+                foreach(TAzureTableEntity entity in entities)
                 {
                     batchOperationForInsertOrMerge.InsertOrMerge(entity);
                 }
@@ -90,14 +88,14 @@ namespace HallmanacAzureTable.EventStore
                 var processIncrement = 0;
                 while(processIncrement <= entities.Length)
                 {
-                    var batchOf100 = new TEntity[100];
+                    var batchOf100 = new TAzureTableEntity[100];
                     var batchOperationForInsertOrMerge = new TableBatchOperation();
                     for(int i = 0;i < 100;i++)
                     {
                         batchOf100[i] = entities[processIncrement];
                         processIncrement++;
                     }
-                    foreach(TEntity entity in batchOf100)
+                    foreach(TAzureTableEntity entity in batchOf100)
                     {
                         batchOperationForInsertOrMerge.InsertOrMerge(entity);
                     }
@@ -106,18 +104,18 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public void InsertOrReplaceTableEntity(TEntity tableEntity)
+        public void InsertOrReplaceTableEntity(TAzureTableEntity tableEntity)
         {
             TableOperation updateOperation = TableOperation.InsertOrReplace(tableEntity);
             _table.Execute(updateOperation);
         }
 
-        public void BatchInsertOrReplaceTableEntity(TEntity[] entities)
+        public void BatchInsertOrReplaceTableEntity(TAzureTableEntity[] entities)
         {
             if(entities.Length <= 100)
             {
                 var batchOperationForInsertOrReplace = new TableBatchOperation();
-                foreach(TEntity entity in entities)
+                foreach(TAzureTableEntity entity in entities)
                 {
                     batchOperationForInsertOrReplace.InsertOrReplace(entity);
                 }
@@ -128,14 +126,14 @@ namespace HallmanacAzureTable.EventStore
                 var processIncrement = 0;
                 while(processIncrement <= entities.Length)
                 {
-                    var batchOf100 = new TEntity[100];
+                    var batchOf100 = new TAzureTableEntity[100];
                     var batchOperationForInsertOrReplace = new TableBatchOperation();
                     for(int i = 0;i < 100;i++)
                     {
                         batchOf100[i] = entities[processIncrement];
                         processIncrement++;
                     }
-                    foreach(TEntity entity in batchOf100)
+                    foreach(TAzureTableEntity entity in batchOf100)
                     {
                         batchOperationForInsertOrReplace.InsertOrReplace(entity);
                     }
@@ -144,18 +142,18 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public void DeleteTableEntity(TEntity tableEntity)
+        public void DeleteTableEntity(TAzureTableEntity tableEntity)
         {
             TableOperation deleteOperation = TableOperation.Delete(tableEntity);
             _table.Execute(deleteOperation);
         }
 
-        public void BatchDeleteTableEntities(TEntity[] entities)
+        public void BatchDeleteTableEntities(TAzureTableEntity[] entities)
         {
             if(entities.Length <= 100)
             {
                 var batchOperationForDelete = new TableBatchOperation();
-                foreach(TEntity entity in entities)
+                foreach(TAzureTableEntity entity in entities)
                 {
                     batchOperationForDelete.Delete(entity);
                 }
@@ -166,14 +164,14 @@ namespace HallmanacAzureTable.EventStore
                 int processIncrement = 0;
                 while(processIncrement <= entities.Length)
                 {
-                    var batchOf100 = new TEntity[100];
+                    var batchOf100 = new TAzureTableEntity[100];
                     var batchOperationForDelete = new TableBatchOperation();
                     for(int i = 0;i < 100;i++)
                     {
                         batchOf100[i] = entities[processIncrement];
                         processIncrement++;
                     }
-                    foreach(TEntity entity in batchOf100)
+                    foreach(TAzureTableEntity entity in batchOf100)
                     {
                         batchOperationForDelete.Delete(entity);
                     }
@@ -183,17 +181,17 @@ namespace HallmanacAzureTable.EventStore
         }
 
         #region Queries
-        public TableQuery<TableRow<TEntity>> Query()
+        public TableQuery<TAzureTableEntity> Query()
         {
-            return new TableQuery<TEntity>();
+            return new TableQuery<TAzureTableEntity>();
         }
 
-        public IEnumerable<TEntity> GetByPartitionKey(string partitionKey)
+        public IEnumerable<TAzureTableEntity> GetByPartitionKey(string partitionKey)
         {
             string pkFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
-            TableQuery<TEntity> query = new TableQuery<TEntity>().Where(pkFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(pkFilter);
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -207,12 +205,12 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public TEntity Find(string partitionKey, string rowKey)
+        public TAzureTableEntity Find(string partitionKey, string rowKey)
         {
-            return (TEntity)_table.Execute(TableOperation.Retrieve<TEntity>(partitionKey, rowKey)).Result;
+            return (TAzureTableEntity)_table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey)).Result;
         }
 
-        public IEnumerable<TEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",
+        public IEnumerable<TAzureTableEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",
                                                                      string maxRowKey = "")
         {
             string pKFilter = GeneratePartitionKeyFilterCondition(pK);
@@ -233,9 +231,9 @@ namespace HallmanacAzureTable.EventStore
                 combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
                                                TableOperators.And, rKMinimum);
             }
-            TableQuery<TEntity> query = new TableQuery<TEntity>().Where(combinedFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -250,13 +248,12 @@ namespace HallmanacAzureTable.EventStore
         }
 
         #region QueryWherePropertyEquals method with overloads
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, string property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, string property)
         {
-            var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal,
-                property);
+            var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
 
-            TableQuerySegment<TableRow<TableRow<TEntity>>> currentQuerySegment = null;
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -270,12 +267,12 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, byte[] property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, byte[] property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -289,13 +286,13 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, bool property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, bool property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -309,13 +306,13 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, DateTimeOffset property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, DateTimeOffset property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -329,13 +326,13 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, double property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, double property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -349,13 +346,13 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, Guid property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, Guid property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TEntity> currentQuerySegment = null;
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -369,13 +366,13 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, int property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, int property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TEntity>();
-            TableQuerySegment<TableRow<TEntity>> currentQuerySegment = null;
+            var entities = new List<TAzureTableEntity>();
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
@@ -389,19 +386,19 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
-        public IEnumerable<TableRow<TEntity>> QueryWherePropertyEquals(string partitionKey, string propertyName, long property)
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, long property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TableRow<TEntity>> currentQuerySegment = null;
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
                                                                    currentQuerySegment != null
                                                                            ? currentQuerySegment.ContinuationToken
                                                                            : null);
-                foreach (TableRow<TEntity> entity in currentQuerySegment)
+                foreach (TAzureTableEntity entity in currentQuerySegment)
                 {
                     yield return entity;
                 }
@@ -414,11 +411,11 @@ namespace HallmanacAzureTable.EventStore
             return TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
         }
 
-        private TableQuery<TableRow<TEntity>> CreateQueryWithPartitionKeyAndPropertyFilter(string partitionKey, string propertyFilter)
+        private TableQuery<TAzureTableEntity> CreateQueryWithPartitionKeyAndPropertyFilter(string partitionKey, string propertyFilter)
         {
             var pkFilter = GeneratePartitionKeyFilterCondition(partitionKey);
             var combinedFilter = string.Format("({0}) {1} ({2})", pkFilter, TableOperators.And, propertyFilter);
-            TableQuery<TableRow<TEntity>> query = new TableQuery<TableRow<TEntity>>().Where(combinedFilter);
+            TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             return query;
         }
         #endregion

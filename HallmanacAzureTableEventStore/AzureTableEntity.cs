@@ -11,8 +11,6 @@ namespace HallmanacAzureTable.EventStore
 {
     public class AzureTableEntity<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
-        private readonly CloudStorageAccount _storageAccount;
-        
         public AzureTableEntity()
         {
             PartitionKey = SetDefaultPartitionKey();
@@ -31,6 +29,11 @@ namespace HallmanacAzureTable.EventStore
         ///     Instance of the generic type TDomainObject.
         /// </summary>
         public TDomainObject DomainObjectInstance { get; set; }
+        /// <summary>
+        /// In the event that an object is too big to fit within the table entity the remainder of the serialized JSON object string
+        /// would reside here. Used mostly for exceptions.
+        /// </summary>
+        public string IncompleteDomainObjectInstance { get; set; }
 
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }
@@ -40,9 +43,9 @@ namespace HallmanacAzureTable.EventStore
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
             #region Old Way
-            foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
+            /*foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
+                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntityProperty(propertyInfo))
                     return;
                 EntityProperty entityProperty = properties[propertyInfo.Name];
                 if(entityProperty == null)
@@ -59,7 +62,7 @@ namespace HallmanacAzureTable.EventStore
                 var domainObjectProperty = typeof(TDomainObject).GetProperty(entityProperty.Key);
                 if(domainObjectProperty != null) continue;
                 if(IsNativeTableProperty(entityProperty.Key)) continue;
-            }
+            }*/
             #endregion
 
             ReadFatEntity(properties);
@@ -71,7 +74,7 @@ namespace HallmanacAzureTable.EventStore
             /*var regularEntityDictionary = new Dictionary<string, EntityProperty>();
             foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
             {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntity(propertyInfo))
+                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntityProperty(propertyInfo))
                     continue;
                 EntityProperty entityFromProperty = null;
                 try
@@ -93,7 +96,9 @@ namespace HallmanacAzureTable.EventStore
                 }
             }*/
             #endregion
-            return WriteFatEntity(DomainObjectInstance);
+
+            var entityDictionary = WriteFatEntity(DomainObjectInstance);
+            return entityDictionary;
         }
 
         public void MapPropertyNameToPartitionKey(PropertyInfo givenPropertyInfo)
@@ -152,6 +157,46 @@ namespace HallmanacAzureTable.EventStore
             }
         }
 
+        /// <summary>
+        /// Used to create an EntityProperty for use in the IndexedPropertyValue
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="allowUnknownTypes"></param>
+        /// <returns></returns>
+        public EntityProperty CreateEntityPropertyFromObject(object value, bool allowUnknownTypes)
+        {
+            var stringValue = value as string;
+            if(stringValue != null)
+                return new EntityProperty(stringValue);
+            var bytesValue = value as byte[];
+            if(bytesValue != null)
+                return new EntityProperty(bytesValue);
+            if(value is bool)
+                return new EntityProperty((bool)value);
+            if(value is DateTime)
+                return new EntityProperty((DateTime)value);
+            if(value is DateTimeOffset)
+                return new EntityProperty((DateTimeOffset)value);
+            if(value is double)
+                return new EntityProperty((double)value);
+            var guidValue = value as Guid?;
+            if(guidValue != null)
+                return new EntityProperty(guidValue);
+            if(value is int)
+                return new EntityProperty((int)value);
+            if(value is long)
+                return new EntityProperty((long)value);
+            if(allowUnknownTypes)
+            {
+                string complexTypeSerialized = value.ToJsv();
+                if(!(complexTypeSerialized.Length > 63999))
+                    return new EntityProperty(complexTypeSerialized);
+                throw new SerializedEntityPropertySizeException(
+                    "The string serialized object exceeds the 64KB limit for an EntityProperty.", complexTypeSerialized);
+            }
+            return new EntityProperty(string.Empty);
+        }
+
         private string SetDefaultRowKey()
         {
             string defaultRowKeyByTime = string.Format("{0:d19}",
@@ -176,6 +221,11 @@ namespace HallmanacAzureTable.EventStore
             var fatEntityString = combinedFatEntity.ToString();
             var transitionObject = fatEntityString.FromJsv<Object>();
             DomainObjectInstance = transitionObject as TDomainObject;
+            if(DomainObjectInstance == null)
+            {
+                DomainObjectInstance = new TDomainObject();
+                IncompleteDomainObjectInstance = fatEntityString;
+            }
         }
 
         private IDictionary<string, EntityProperty> WriteFatEntity(object givenObject)
@@ -203,7 +253,7 @@ namespace HallmanacAzureTable.EventStore
             return fatEntityDictionary;
         }
 
-        private bool PropertyInfoIsValidForEntity(PropertyInfo propertyInfo)
+        private bool PropertyInfoIsValidForEntityProperty(PropertyInfo propertyInfo)
         {
             return (propertyInfo.GetGetMethod() != null || propertyInfo.GetGetMethod().IsPublic ||
                 propertyInfo.GetSetMethod() != null || propertyInfo.GetSetMethod().IsPublic);
@@ -315,40 +365,6 @@ namespace HallmanacAzureTable.EventStore
                         Convert.ChangeType(deserializedFromString, propertyInfo.PropertyType));
                     return;
             }
-        }
-
-        private static EntityProperty CreateEntityPropertyFromObject(object value, bool allowUnknownTypes)
-        {
-            var stringValue = value as string;
-            if(stringValue != null)
-                return new EntityProperty(stringValue);
-            var bytesValue = value as byte[];
-            if(bytesValue != null)
-                return new EntityProperty(bytesValue);
-            if(value is bool)
-                return new EntityProperty((bool)value);
-            if(value is DateTime)
-                return new EntityProperty((DateTime)value);
-            if(value is DateTimeOffset)
-                return new EntityProperty((DateTimeOffset)value);
-            if(value is double)
-                return new EntityProperty((double)value);
-            var guidValue = value as Guid?;
-            if(guidValue != null)
-                return new EntityProperty(guidValue);
-            if(value is int)
-                return new EntityProperty((int)value);
-            if(value is long)
-                return new EntityProperty((long)value);
-            if(allowUnknownTypes)
-            {
-                string complexTypeSerialized = JsonSerializer.SerializeToString(value, typeof(Object));
-                if(!(complexTypeSerialized.Length > 63999))
-                    return new EntityProperty(complexTypeSerialized);
-                throw new SerializedEntityPropertySizeException(
-                    "The string serialized object exceeds the 64KB limit for an EntityProperty.", complexTypeSerialized);
-            }
-            return new EntityProperty(string.Empty);
         }
     }
 }
