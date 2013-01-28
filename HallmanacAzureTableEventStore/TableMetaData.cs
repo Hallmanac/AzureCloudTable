@@ -1,14 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace HallmanacAzureTable.EventStore
 {
-    internal class TableMetaData<TDomainObject> where TDomainObject : class, new()
+    public class TableMetaData<TDomainObject> where TDomainObject : class, new()
     {
-        public List<string> PartitionSchemes { get; set; }
+        public Dictionary<string, Func<TDomainObject, bool>> PartitionSchemes { get; set; } 
 
         public TableMetaData()
         {
-            PartitionSchemes = new List<string>();
+            PartitionSchemes = new Dictionary<string, Func<TDomainObject, bool>>();
         }
     }
 }

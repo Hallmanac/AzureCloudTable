@@ -14,7 +14,8 @@ namespace HallmanacAzureTable.EventStore
 
         private List<Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>> _partitionSchemas; 
 
-        private AzureTableEntity<TableMetaData<TDomainEntity>> _tableMetaDataEntity;  
+        private AzureTableEntity<TableMetaData<TDomainEntity>> _tableMetaDataEntity;
+        private AzureTableContext<AzureTableEntity<TableMetaData<TDomainEntity>>> _metadataContext;  
 
         public CloudTableContext(CloudStorageAccount storageAccount)
         {
@@ -28,16 +29,46 @@ namespace HallmanacAzureTable.EventStore
             Init(storageAccount, tableName);
         }
 
+        public void BatchAddPartitionSchemas(Dictionary<string, Func<TDomainEntity, bool>> partitionScheme)
+        {
+            var canWritePartition = false;
+            foreach(var pair in partitionScheme)
+            {
+                if(PartitionExists(pair.Key, pair.Value)) continue;
+                canWritePartition = true;
+            }
+            if(canWritePartition)
+                _metadataContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
+        }
+
+        public void AddPartitionSchema(string partitionName, Func<TDomainEntity, bool> validationMethod)
+        {
+            if(PartitionExists(partitionName, validationMethod)) return;
+            _metadataContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
+        }
+
         private void Init(CloudStorageAccount storageAccount, string tableName)
         {
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
-            _tableMetaDataEntity = new AzureTableEntity<TableMetaData<TDomainEntity>>(tableName + "_Metadata", tableName);
             _partitionSchemas = new List<Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>>();
+
+            _metadataContext = new AzureTableContext<AzureTableEntity<TableMetaData<TDomainEntity>>>(storageAccount,
+                tableName);
+            _tableMetaDataEntity = _metadataContext.Find(tableName + "_Metadata", tableName);
+            if(_tableMetaDataEntity != null)
+            {
+                foreach(var partitionScheme in _tableMetaDataEntity.DomainObjectInstance.PartitionSchemes)
+                {
+                    _partitionSchemas.Add(new Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>
+                        (partitionScheme.Key, partitionScheme.Value, new List<AzureTableEntity<TDomainEntity>>()));
+                }
+            }
+            _tableMetaDataEntity = new AzureTableEntity<TableMetaData<TDomainEntity>>(tableName + "_Metadata", tableName);
         }
 
-        public void AddPartitionSchema(string partitionName, Func<TDomainEntity, bool> validationMethod)
+        private bool PartitionExists(string partitionName, Func<TDomainEntity, bool> validationMethod)
         {
             var tupleExists = false;
             foreach(var tuple in _partitionSchemas)
@@ -48,22 +79,25 @@ namespace HallmanacAzureTable.EventStore
                 }
             }
             if(tupleExists)
-                return;
+                return true;
             var entityList = new List<AzureTableEntity<TDomainEntity>>();
             _partitionSchemas.Add(
-                                new Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>(
-                                    partitionName, validationMethod, entityList));
+                                  new Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>(
+                                      partitionName, validationMethod, entityList));
+            if(!_tableMetaDataEntity.DomainObjectInstance.PartitionSchemes.ContainsKey(partitionName))
+                _tableMetaDataEntity.DomainObjectInstance.PartitionSchemes.Add(partitionName, validationMethod);
+            return false;
         }
 
         private void CheckEntitiesAgainstPartitionSchemes(IEnumerable<AzureTableEntity<TDomainEntity>> givenEntities)
         {
             foreach(var domainEntity in givenEntities)
             {
-                AddTableEntityToPartitionScheme(domainEntity);
+                ValidateTableEntityAgainstPartitionSchemes(domainEntity);
             }
         }
 
-        private void AddTableEntityToPartitionScheme(AzureTableEntity<TDomainEntity> domainEntity)
+        private void ValidateTableEntityAgainstPartitionSchemes(AzureTableEntity<TDomainEntity> domainEntity)
         {
             foreach(var partitionSchema in _partitionSchemas)
             {
@@ -73,8 +107,6 @@ namespace HallmanacAzureTable.EventStore
                 }
             }
         }
-
-        //List<IPartitionScheme<TDomainEntity>> PartitionSchemes { get; set; } 
 
         //Insert(TDomainEntity domainObject){}
         //BatchInsert(TDomainEntity[] domainObjects{}
