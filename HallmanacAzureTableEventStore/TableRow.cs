@@ -41,7 +41,7 @@ namespace HallmanacAzureTable.EventStore
             IsMappedAsFatEntity = isMappedAsFatEntity;
             Metadata = new Dictionary<string, object>();
             _storageAccount = storageAccount;
-            QueryContext = new AzureTableContext<TableRow<TDomainObject>>(storageAccount);
+            ReadWriteReadWriteContext = new TableReadWriteContext<TableRow<TDomainObject>>(storageAccount);
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace HallmanacAzureTable.EventStore
         /// </summary>
         public TDomainObject DomainObjectInstance { get; set; }
 
-        public AzureTableContext<TableRow<TDomainObject>> QueryContext { get; set; }
+        public TableReadWriteContext<TableRow<TDomainObject>> ReadWriteReadWriteContext { get; set; }
 
         /// <summary>
         ///     Dictionary property used to add additional metadata related to the storing of the TDomainObject
