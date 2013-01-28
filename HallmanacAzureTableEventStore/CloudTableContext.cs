@@ -10,12 +10,12 @@ namespace HallmanacAzureTable.EventStore
     public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
     {
         private CloudTable _table;
-        private readonly AzureTableContext<AzureTableEntity<TDomainEntity>> _tableContext; 
+        private readonly TableReadWriteContext<AzureTableEntity<TDomainEntity>> _tableReadWriteContext; 
 
         private List<Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>> _partitionSchemas; 
 
         private AzureTableEntity<TableMetaData<TDomainEntity>> _tableMetaDataEntity;
-        private AzureTableContext<AzureTableEntity<TableMetaData<TDomainEntity>>> _metadataContext;  
+        private TableReadWriteContext<AzureTableEntity<TableMetaData<TDomainEntity>>> _metadataReadWriteContext;  
 
         public CloudTableContext(CloudStorageAccount storageAccount)
         {
@@ -38,13 +38,13 @@ namespace HallmanacAzureTable.EventStore
                 canWritePartition = true;
             }
             if(canWritePartition)
-                _metadataContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
+                _metadataReadWriteContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
         }
 
         public void AddPartitionSchema(string partitionName, Func<TDomainEntity, bool> validationMethod)
         {
             if(PartitionExists(partitionName, validationMethod)) return;
-            _metadataContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
+            _metadataReadWriteContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
         }
 
         private void Init(CloudStorageAccount storageAccount, string tableName)
@@ -54,9 +54,9 @@ namespace HallmanacAzureTable.EventStore
             _table.CreateIfNotExists();
             _partitionSchemas = new List<Tuple<string, Func<TDomainEntity, bool>, List<AzureTableEntity<TDomainEntity>>>>();
 
-            _metadataContext = new AzureTableContext<AzureTableEntity<TableMetaData<TDomainEntity>>>(storageAccount,
+            _metadataReadWriteContext = new TableReadWriteContext<AzureTableEntity<TableMetaData<TDomainEntity>>>(storageAccount,
                 tableName);
-            _tableMetaDataEntity = _metadataContext.Find(tableName + "_Metadata", tableName);
+            _tableMetaDataEntity = _metadataReadWriteContext.Find(tableName + "_Metadata", tableName);
             if(_tableMetaDataEntity != null)
             {
                 foreach(var partitionScheme in _tableMetaDataEntity.DomainObjectInstance.PartitionSchemes)
