@@ -26,6 +26,8 @@ namespace HallmanacAzureTable.EventStore
             return memberExpression.Member.Name;
         }
 
+        
+
         public static Stream ToStream(this string theString)
         {
             var memStream = new MemoryStream();

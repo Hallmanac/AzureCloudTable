@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
+using ServiceStack.Text;
 
 namespace HallmanacAzureTable.EventStore
 {
@@ -28,156 +30,59 @@ namespace HallmanacAzureTable.EventStore
             _table.CreateIfNotExists();
         }
 
-        public void InsertTableEntity(TAzureTableEntity tableEntity)
+        public void Insert(TAzureTableEntity tableEntity)
         {
             var insertTableEntity = TableOperation.Insert(tableEntity);
             _table.Execute(insertTableEntity);
         }
 
-        public void BatchInsertTableEntities(TAzureTableEntity[] entities)
+        public void Insert(TAzureTableEntity[] entities)
         {
-            if(entities.Length <= 100)
-            {
-                var batchOperationForInsert = new TableBatchOperation();
-                foreach(TAzureTableEntity entity in entities)
-                {
-                    batchOperationForInsert.Insert(entity);
-                }
-                _table.ExecuteBatch(batchOperationForInsert);
-            }
-            else
-            {
-                var processIncrement = 0;
-                while(processIncrement <= entities.Length)
-                {
-                    var batchOf100 = new TAzureTableEntity[100];
-                    var batchOperationForInsert = new TableBatchOperation();
-                    for(int i = 0;i < 100;i++)
-                    {
-                        batchOf100[i] = entities[processIncrement];
-                        processIncrement++;
-                    }
-                    foreach(TAzureTableEntity entity in batchOf100)
-                    {
-                        batchOperationForInsert.Insert(entity);
-                    }
-                    _table.ExecuteBatch(batchOperationForInsert);
-                }
-            }
+            ExecuteBatchOperation(entities, "Insert");
         }
 
-        public void InsertOrMergeTableEntity(TAzureTableEntity tableEntity)
+        public void InsertOrMerge(TAzureTableEntity tableEntity)
         {
             TableOperation updateOperation = TableOperation.InsertOrMerge(tableEntity);
             _table.Execute(updateOperation);
         }
 
-        public void BatchInsertOrMergeTableEntity(TAzureTableEntity[] entities)
+        public void InsertOrMerge(TAzureTableEntity[] entities)
         {
-            if(entities.Length <= 100)
-            {
-                var batchOperationForInsertOrMerge = new TableBatchOperation();
-                foreach(TAzureTableEntity entity in entities)
-                {
-                    batchOperationForInsertOrMerge.InsertOrMerge(entity);
-                }
-                _table.ExecuteBatch(batchOperationForInsertOrMerge);
-            }
-            else
-            {
-                var processIncrement = 0;
-                while(processIncrement <= entities.Length)
-                {
-                    var batchOf100 = new TAzureTableEntity[100];
-                    var batchOperationForInsertOrMerge = new TableBatchOperation();
-                    for(int i = 0;i < 100;i++)
-                    {
-                        batchOf100[i] = entities[processIncrement];
-                        processIncrement++;
-                    }
-                    foreach(TAzureTableEntity entity in batchOf100)
-                    {
-                        batchOperationForInsertOrMerge.InsertOrMerge(entity);
-                    }
-                    _table.ExecuteBatch(batchOperationForInsertOrMerge);
-                }
-            }
+            ExecuteBatchOperation(entities, "InsertOrMerge");
         }
 
-        public void InsertOrReplaceTableEntity(TAzureTableEntity tableEntity)
+        public void InsertOrReplace(TAzureTableEntity tableEntity)
         {
             TableOperation updateOperation = TableOperation.InsertOrReplace(tableEntity);
             _table.Execute(updateOperation);
         }
 
-        public void BatchInsertOrReplaceTableEntity(TAzureTableEntity[] entities)
+        public void InsertOrReplace(TAzureTableEntity[] entities)
         {
-            if(entities.Length <= 100)
-            {
-                var batchOperationForInsertOrReplace = new TableBatchOperation();
-                foreach(TAzureTableEntity entity in entities)
-                {
-                    batchOperationForInsertOrReplace.InsertOrReplace(entity);
-                }
-                _table.ExecuteBatch(batchOperationForInsertOrReplace);
-            }
-            else
-            {
-                var processIncrement = 0;
-                while(processIncrement <= entities.Length)
-                {
-                    var batchOf100 = new TAzureTableEntity[100];
-                    var batchOperationForInsertOrReplace = new TableBatchOperation();
-                    for(int i = 0;i < 100;i++)
-                    {
-                        batchOf100[i] = entities[processIncrement];
-                        processIncrement++;
-                    }
-                    foreach(TAzureTableEntity entity in batchOf100)
-                    {
-                        batchOperationForInsertOrReplace.InsertOrReplace(entity);
-                    }
-                    _table.ExecuteBatch(batchOperationForInsertOrReplace);
-                }
-            }
+            ExecuteBatchOperation(entities, "InsertOrReplace");
         }
 
-        public void DeleteTableEntity(TAzureTableEntity tableEntity)
+        public void Delete(TAzureTableEntity tableEntity)
         {
             TableOperation deleteOperation = TableOperation.Delete(tableEntity);
             _table.Execute(deleteOperation);
         }
 
-        public void BatchDeleteTableEntities(TAzureTableEntity[] entities)
+        public void Delete(TAzureTableEntity[] entities)
         {
-            if(entities.Length <= 100)
-            {
-                var batchOperationForDelete = new TableBatchOperation();
-                foreach(TAzureTableEntity entity in entities)
-                {
-                    batchOperationForDelete.Delete(entity);
-                }
-                _table.ExecuteBatch(batchOperationForDelete);
-            }
-            else
-            {
-                int processIncrement = 0;
-                while(processIncrement <= entities.Length)
-                {
-                    var batchOf100 = new TAzureTableEntity[100];
-                    var batchOperationForDelete = new TableBatchOperation();
-                    for(int i = 0;i < 100;i++)
-                    {
-                        batchOf100[i] = entities[processIncrement];
-                        processIncrement++;
-                    }
-                    foreach(TAzureTableEntity entity in batchOf100)
-                    {
-                        batchOperationForDelete.Delete(entity);
-                    }
-                    _table.ExecuteBatch(batchOperationForDelete);
-                }
-            }
+            ExecuteBatchOperation(entities, "Delete");
+        }
+
+        public void Replace(TAzureTableEntity tableEntity)
+        {
+            var replaceOperation = TableOperation.Delete(tableEntity);
+            _table.Execute(replaceOperation);
+        }
+
+        public void Replace(TAzureTableEntity[] entities)
+        {
+            ExecuteBatchOperation(entities, "Replace");
         }
 
         #region Queries
@@ -419,5 +324,111 @@ namespace HallmanacAzureTable.EventStore
             return query;
         }
         #endregion
+
+        private int GetRoughSizeOfEntitiesArray(TAzureTableEntity[] entities)
+        {
+            var entitesSerializedAsJsv = entities.ToJsv();
+            return entitesSerializedAsJsv.Length;
+        }
+
+        private bool EntitiesAreOfTheSamePartition(TAzureTableEntity[] entities)
+        {
+            var partitionName = entities[0].PartitionKey;
+            foreach(var azureTableEntity in entities)
+            {
+                if(azureTableEntity.PartitionKey == partitionName)
+                    continue;
+                return false;
+            }
+            return true;
+        }
+
+        private void ExecuteBatchOperation(TAzureTableEntity[] entities, string batchMethodName)
+        {
+            if (!EntitiesAreOfTheSamePartition(entities))
+                throw new Exception("Different Partition Keys detected. Entity Group Transactions (batching) have to be of the same PartitionKey");
+            int sizeOfEntitiesArray = GetRoughSizeOfEntitiesArray(entities);
+            TableBatchOperation batchOperationForInsertOrMerge;
+            TableBatchOperation theBatchOperation;
+            if (sizeOfEntitiesArray <= 4000000)
+            {
+                theBatchOperation = new TableBatchOperation();
+                if (entities.Length <= 100)
+                {
+                    foreach (TAzureTableEntity entity in entities)
+                    {
+                        AddOperationToBatch(ref theBatchOperation, entity, batchMethodName);
+                    }
+                    _table.ExecuteBatch(theBatchOperation);
+                }
+                else if (entities.Length > 100)
+                {
+                    var processIncrement = 0;
+                    while (processIncrement <= entities.Length)
+                    {
+                        var batchOf100 = new TAzureTableEntity[100];
+                        theBatchOperation = new TableBatchOperation();
+                        for (int i = 0; i < 100; i++)
+                        {
+                            batchOf100[i] = entities[processIncrement];
+                            processIncrement++;
+                        }
+                        foreach (TAzureTableEntity entity in batchOf100)
+                        {
+                            AddOperationToBatch(ref theBatchOperation, entity, batchMethodName);
+                        }
+                        _table.ExecuteBatch(theBatchOperation);
+                    }
+                }
+            }
+            //There might be a more efficient way to do this (below). For example, there might be 1500 entities that equal 3MB of space
+            //and two entities that are 1MB each (which push the batch over the 4MB limit of EGT's), so it would be more efficient in 
+            //that case to not break things into batches of four. The algorithm below just guarantees that things will work since a single
+            //entity cannot exceed 1MB in size.
+            else if (sizeOfEntitiesArray > 4000000)
+            {
+                var incrementer = 0;
+                theBatchOperation = new TableBatchOperation();
+                while (incrementer <= entities.Length)
+                {
+                    var batchOf4 = new TAzureTableEntity[4];
+                    for (int i = 0; i < 4; i++)
+                    {
+                        batchOf4[i] = entities[incrementer];
+                        incrementer++;
+                    }
+                    foreach (var entity in batchOf4)
+                    {
+                        AddOperationToBatch(ref theBatchOperation, entity, batchMethodName);
+                    }
+                    _table.ExecuteBatch(theBatchOperation);
+                }
+            }
+        }
+
+        private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
+        {
+            switch (batchMethodName)
+            {
+                case "Insert":
+                    tableBatchOperation.Insert(entity);
+                    break;
+                case "InsertOrMerge":
+                    tableBatchOperation.InsertOrMerge(entity);
+                    break;
+                case "InsertOrReplace":
+                    tableBatchOperation.InsertOrReplace(entity);
+                    break;
+                case "Merge":
+                    tableBatchOperation.Merge(entity);
+                    break;
+                case "Delete":
+                    tableBatchOperation.Delete(entity);
+                    break;
+                case "Replace":
+                    tableBatchOperation.Replace(entity);
+                    break;
+            }
+        }
     }
 }

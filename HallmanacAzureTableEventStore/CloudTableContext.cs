@@ -38,13 +38,13 @@ namespace HallmanacAzureTable.EventStore
                 canWritePartition = true;
             }
             if(canWritePartition)
-                _metadataReadWriteContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
+                _metadataReadWriteContext.InsertOrReplace(_tableMetaDataEntity);
         }
 
         public void AddPartitionSchema(string partitionName, Func<TDomainEntity, bool> validationMethod)
         {
             if(PartitionExists(partitionName, validationMethod)) return;
-            _metadataReadWriteContext.InsertOrReplaceTableEntity(_tableMetaDataEntity);
+            _metadataReadWriteContext.InsertOrReplace(_tableMetaDataEntity);
         }
 
         private void Init(CloudStorageAccount storageAccount, string tableName)
