@@ -65,7 +65,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AzureTableEntity.cs" />
+    <Compile Include="CloudTableEntity.cs" />
     <Compile Include="TableReadWriteContext.cs" />
     <Compile Include="CloudTableContext.cs" />
     <Compile Include="ExtensionMethods.cs" />

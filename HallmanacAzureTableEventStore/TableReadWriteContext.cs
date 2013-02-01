@@ -30,17 +30,6 @@ namespace HallmanacAzureTable.EventStore
             _table.CreateIfNotExists();
         }
 
-        public void Insert(TAzureTableEntity tableEntity)
-        {
-            var insertTableEntity = TableOperation.Insert(tableEntity);
-            _table.Execute(insertTableEntity);
-        }
-
-        public void Insert(TAzureTableEntity[] entities)
-        {
-            ExecuteBatchOperation(entities, "Insert");
-        }
-
         public void InsertOrMerge(TAzureTableEntity tableEntity)
         {
             TableOperation updateOperation = TableOperation.InsertOrMerge(tableEntity);
@@ -61,6 +50,17 @@ namespace HallmanacAzureTable.EventStore
         public void InsertOrReplace(TAzureTableEntity[] entities)
         {
             ExecuteBatchOperation(entities, "InsertOrReplace");
+        }
+
+        public void Insert(TAzureTableEntity tableEntity)
+        {
+            var insertTableEntity = TableOperation.Insert(tableEntity);
+            _table.Execute(insertTableEntity);
+        }
+
+        public void Insert(TAzureTableEntity[] entities)
+        {
+            ExecuteBatchOperation(entities, "Insert");
         }
 
         public void Delete(TAzureTableEntity tableEntity)

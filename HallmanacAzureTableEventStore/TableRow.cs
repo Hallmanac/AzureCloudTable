@@ -13,7 +13,7 @@ namespace HallmanacAzureTable.EventStore
     /// that property is serialized as JSON and stored as a string in Table storage as long as it fits within the 64KB limit.
     /// </summary>
     /// <typeparam name="TDomainObject"></typeparam>
-    public class TableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
+    internal class TableRow<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
         //CreatePartitionIndexByProperty(PropertyInfo propInfo, string rowKey = null) --> The PartitionKey would be the value of the property
         //(up to 1000 characters) and the default RowKey would be the AggregateID (unless that's the mapped partition key) then it would be a date-time ticks.
@@ -428,7 +428,7 @@ namespace HallmanacAzureTable.EventStore
             if(allowUnknownTypes)
             {
                 string complexTypeSerialized = JsonSerializer.SerializeToString(value, typeof(Object));
-                if(!(complexTypeSerialized.Length > 63999))
+                if(!(complexTypeSerialized.Length > 63997))
                     return new EntityProperty(complexTypeSerialized);
                 throw new SerializedEntityPropertySizeException(
                     "The string serialized object exceeds the 64KB limit for an EntityProperty.", complexTypeSerialized);
