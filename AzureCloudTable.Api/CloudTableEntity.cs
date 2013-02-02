@@ -245,6 +245,7 @@ namespace HallmanacAzureTable.EventStore
         public ObjectToLargeForFatEntityException(){}
 
         public ObjectToLargeForFatEntityException(string message, object givenObject)
+            :base(message)
         {
             GivenObject = givenObject;
         }
