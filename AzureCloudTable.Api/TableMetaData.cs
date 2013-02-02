@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HallmanacAzureTable.EventStore
+namespace AzureCloudTable.EventStore
 {
     internal class TableMetaData<TDomainObject> where TDomainObject : class, new()
     {

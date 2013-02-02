@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq.Expressions;
 
-namespace HallmanacAzureTable.EventStore
+namespace AzureCloudTable.EventStore
 {
     public static class ExtensionMethods
     {
