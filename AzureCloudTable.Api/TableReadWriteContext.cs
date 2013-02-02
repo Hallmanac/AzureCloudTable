@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection;
+using System.Linq;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
@@ -95,7 +95,6 @@ namespace HallmanacAzureTable.EventStore
         {
             string pkFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
             TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(pkFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -137,7 +136,6 @@ namespace HallmanacAzureTable.EventStore
                                                TableOperators.And, rKMinimum);
             }
             TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -176,7 +174,6 @@ namespace HallmanacAzureTable.EventStore
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -196,7 +193,6 @@ namespace HallmanacAzureTable.EventStore
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -216,7 +212,6 @@ namespace HallmanacAzureTable.EventStore
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -236,7 +231,6 @@ namespace HallmanacAzureTable.EventStore
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -256,7 +250,6 @@ namespace HallmanacAzureTable.EventStore
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -276,7 +269,6 @@ namespace HallmanacAzureTable.EventStore
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
                                                                            property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            var entities = new List<TAzureTableEntity>();
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -334,13 +326,7 @@ namespace HallmanacAzureTable.EventStore
         private bool EntitiesAreOfTheSamePartition(TAzureTableEntity[] entities)
         {
             var partitionName = entities[0].PartitionKey;
-            foreach(var azureTableEntity in entities)
-            {
-                if(azureTableEntity.PartitionKey == partitionName)
-                    continue;
-                return false;
-            }
-            return true;
+            return entities.All(azureTableEntity => azureTableEntity.PartitionKey == partitionName);
         }
 
         private void ExecuteBatchOperation(TAzureTableEntity[] entities, string batchMethodName)
@@ -348,7 +334,6 @@ namespace HallmanacAzureTable.EventStore
             if (!EntitiesAreOfTheSamePartition(entities))
                 throw new Exception("Different Partition Keys detected. Entity Group Transactions (batching) have to be of the same PartitionKey");
             int sizeOfEntitiesArray = GetRoughSizeOfEntitiesArray(entities);
-            TableBatchOperation batchOperationForInsertOrMerge;
             TableBatchOperation theBatchOperation;
             if (sizeOfEntitiesArray <= 4000000)
             {
