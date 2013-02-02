@@ -1,3 +1,4 @@
+**2012/02/02:**
 **WARNING - This isn't even 0.1 yet so the documentation is probably confusing as hell and there might be bugs. I'm starting to use this code in production for a project and will work out the kinks as I discover them.**
 
 AzureCloudTable
