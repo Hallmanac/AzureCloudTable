@@ -9,10 +9,11 @@ This library is a wrapper around the Azure Storage SDK 2.0. It allows one to use
 
 There are two main parts:
 
-1) CloudTableEntity<TDomainObject> where TDomainObject : class, new()
-  a) This will be used to wrap a POCO into an Azure ITableEntity.
-2) CloudTableContext<TDomainObject> where TDomainObject : class, new()
-  a) This class is used to maanage the wrapped POCOs as well as the basic CRUD operations against the Azure table.
+     1) CloudTableEntity<TDomainObject> where TDomainObject : class, new()
+        a) This will be used to wrap a POCO into an Azure ITableEntity.
+  
+     2) CloudTableContext<TDomainObject> where TDomainObject : class, new()
+        a) This class is used to maanage the wrapped POCOs as well as the basic CRUD operations against the Azure table.
 
 ==================================
 CloudTableEntity<TDomainObject> Class
