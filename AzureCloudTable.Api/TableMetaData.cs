@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace HallmanacAzureTable.EventStore
 {
-    public class TableMetaData<TDomainObject> where TDomainObject : class, new()
+    internal class TableMetaData<TDomainObject> where TDomainObject : class, new()
     {
         public Dictionary<string, Func<TDomainObject, bool>> PartitionSchemes { get; set; } 
 
