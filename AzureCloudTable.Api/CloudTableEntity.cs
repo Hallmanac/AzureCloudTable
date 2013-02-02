@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
@@ -209,20 +208,25 @@ namespace HallmanacAzureTable.EventStore
             var fatEntityDictionary = new Dictionary<string, EntityProperty>();
 
             string serializedObject = givenObject.ToJsv();
-            int maxStringSize = 63997; //This is a "just in case". I found that when an object is serialized to a UTF-8 encoded 
+            int maxStringBlockSize = 63997; //This is a "just in case". I found that when an object is serialized to a UTF-8 encoded 
                                        //string and is saved to a txt file it eats up an additional 3 Bytes. Probably over thinking
                                        //this but hey, that's how I roll.
             int stringLength = serializedObject.Length;
             int dictionaryCount = fatEntityDictionary.Count;
-            for(int i = 0;i < stringLength;i += maxStringSize)
+            for(int i = 0;i <= stringLength;i += maxStringBlockSize)
             {
-                if((i + maxStringSize) > stringLength)
-                    maxStringSize = stringLength - i;
-                string entityValue = serializedObject.Substring(i, maxStringSize);
+                if((i + maxStringBlockSize) > stringLength)
+                    maxStringBlockSize = stringLength - i;
+                string entityValue = serializedObject.Substring(i, maxStringBlockSize);
                 string entityKey = string.Format("{0:D2}", dictionaryCount);
                 if(fatEntityDictionary.Count < 15)
                 {
                     fatEntityDictionary.Add(entityKey, new EntityProperty(entityValue));
+                }
+                else
+                {
+                    throw new ObjectToLargeForFatEntityException(
+                        "Object is too large for serializing into a Fat Table Entity", givenObject);
                 }
                 dictionaryCount++;
             }
@@ -234,5 +238,17 @@ namespace HallmanacAzureTable.EventStore
             return (propertyName == "PartitionKey" || propertyName == "RowKey" ||
                 (propertyName == "Timestamp" || propertyName == "ETag"));
         }
+    }
+
+    internal class ObjectToLargeForFatEntityException : Exception
+    {
+        public ObjectToLargeForFatEntityException(){}
+
+        public ObjectToLargeForFatEntityException(string message, object givenObject)
+        {
+            GivenObject = givenObject;
+        }
+
+        public object GivenObject { get; private set; }
     }
 }
