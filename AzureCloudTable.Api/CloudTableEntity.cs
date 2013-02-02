@@ -6,7 +6,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
-namespace AzureCloudTable.EventStore
+namespace AzureCloudTable.Api
 {
     public class CloudTableEntity<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {

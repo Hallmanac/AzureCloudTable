@@ -2,7 +2,7 @@
 using System.IO;
 using System.Linq.Expressions;
 
-namespace AzureCloudTable.EventStore
+namespace AzureCloudTable.Api
 {
     public static class ExtensionMethods
     {

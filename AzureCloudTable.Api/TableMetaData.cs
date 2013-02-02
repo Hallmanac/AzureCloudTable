@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AzureCloudTable.EventStore
+namespace AzureCloudTable.Api
 {
     internal class TableMetaData<TDomainObject> where TDomainObject : class, new()
     {

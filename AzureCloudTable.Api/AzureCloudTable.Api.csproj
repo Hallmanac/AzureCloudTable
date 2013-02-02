@@ -7,8 +7,8 @@
     <ProjectGuid>{2F903A85-EE73-4A46-813E-83E258BA9F6B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HallmanacAzureTable.EventStore</RootNamespace>
-    <AssemblyName>HallmanacAzureTable.EventStore</AssemblyName>
+    <RootNamespace>AzureCloudTable.Api</RootNamespace>
+    <AssemblyName>AzureCloudTable.Api</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -66,6 +66,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CloudTableEntity.cs" />
+    <Compile Include="PartitionSchema.cs" />
     <Compile Include="TableReadWriteContext.cs" />
     <Compile Include="CloudTableContext.cs" />
     <Compile Include="ExtensionMethods.cs" />

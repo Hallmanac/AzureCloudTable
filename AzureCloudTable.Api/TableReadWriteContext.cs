@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
-namespace AzureCloudTable.EventStore
+namespace AzureCloudTable.Api
 {
     public class TableReadWriteContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {

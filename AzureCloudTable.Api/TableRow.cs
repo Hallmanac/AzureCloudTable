@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
-namespace AzureCloudTable.EventStore
+namespace AzureCloudTable.Api
 {
     /// <summary>
     /// WARNING: This implementation has issues and is not complete. Use for research purposes or finish the implementation. --- 
