@@ -38,29 +38,6 @@ namespace AzureCloudTable.Api
 
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
-            #region Old Way
-            /*foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
-            {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntityProperty(propertyInfo))
-                    return;
-                EntityProperty entityProperty = properties[propertyInfo.Name];
-                if(entityProperty == null)
-                {
-                    propertyInfo.SetValue(DomainObjectInstance, null, null);
-                }
-                else
-                {
-                    SetPropertyValueFromEntityProperty(entityProperty, propertyInfo);
-                }
-            }
-            foreach(var entityProperty in properties)
-            {
-                var domainObjectProperty = typeof(TDomainObject).GetProperty(entityProperty.Key);
-                if(domainObjectProperty != null) continue;
-                if(IsNativeTableProperty(entityProperty.Key)) continue;
-            }*/
-            #endregion
-
             EntityProperty indexedEntityProperty;
             if(properties.TryGetValue(this.GetPropertyName(() => IndexedProperty), out indexedEntityProperty))
             {
@@ -71,33 +48,6 @@ namespace AzureCloudTable.Api
 
         public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
         {
-            #region Old way
-            /*var regularEntityDictionary = new Dictionary<string, EntityProperty>();
-            foreach(PropertyInfo propertyInfo in typeof(TDomainObject).GetProperties())
-            {
-                if(IsNativeTableProperty(propertyInfo.Name) || !PropertyInfoIsValidForEntityProperty(propertyInfo))
-                    continue;
-                EntityProperty entityFromProperty = null;
-                try
-                {
-                    entityFromProperty =
-                        CreateEntityPropertyFromObject(propertyInfo.GetValue(DomainObjectInstance), true);
-                }
-                catch(TableRowEntityPropertySizeException entityPropertySizeException)
-                {
-                    entityFromProperty = new EntityProperty(entityPropertySizeException.Entity);
-                }
-                finally
-                {
-                    if(entityFromProperty == null) {}
-                    else
-                    {
-                        regularEntityDictionary.Add(propertyInfo.Name, entityFromProperty);
-                    }
-                }
-            }*/
-            #endregion
-
             var entityDictionary = WriteFatEntity(DomainObjectInstance);
             if(IndexedProperty != null)
             {
@@ -114,62 +64,6 @@ namespace AzureCloudTable.Api
                 }
             }
             return entityDictionary;
-        }
-
-        public void MapPropertyNameToPartitionKey(PropertyInfo givenPropertyInfo)
-        {
-            if(DomainObjectInstance != null)
-            {
-                foreach(PropertyInfo propertyInfo in DomainObjectInstance.GetType().GetProperties())
-                {
-                    if(String.Equals(propertyInfo.Name, givenPropertyInfo.Name))
-                    {
-                        PartitionKey = givenPropertyInfo.Name;
-                    }
-                }
-            }
-        }
-
-        public void MapPropertyValueToPartitionKey(PropertyInfo givenPropertyInfo)
-        {
-            if(DomainObjectInstance != null)
-                foreach(PropertyInfo propInfo in DomainObjectInstance.GetType().GetProperties())
-                {
-                    if(String.Equals(propInfo.Name, givenPropertyInfo.Name))
-                    {
-                        object propertyValue = propInfo.GetValue(DomainObjectInstance);
-                        PartitionKey = JsonSerializer.SerializeToString(propertyValue, typeof(Object));
-                    }
-                }
-        }
-
-        public void MapPropertyNameToRowKey(PropertyInfo givenPropertyInfo)
-        {
-            if(DomainObjectInstance != null)
-            {
-                foreach(PropertyInfo propertyInfo in DomainObjectInstance.GetType().GetProperties())
-                {
-                    if(String.Equals(propertyInfo.Name, givenPropertyInfo.Name))
-                    {
-                        RowKey = givenPropertyInfo.Name;
-                    }
-                }
-            }
-        }
-
-        public void MapPropertyValueToRowKey(PropertyInfo givenPropertyInfo)
-        {
-            if(DomainObjectInstance != null)
-            {
-                foreach(PropertyInfo propertyInfo in DomainObjectInstance.GetType().GetProperties())
-                {
-                    if(String.Equals(propertyInfo.Name, givenPropertyInfo.Name))
-                    {
-                        object propertyValue = propertyInfo.GetValue(DomainObjectInstance);
-                        RowKey = JsonSerializer.SerializeToString(propertyValue, typeof(Object));
-                    }
-                }
-            }
         }
 
         private string SetDefaultRowKey()
