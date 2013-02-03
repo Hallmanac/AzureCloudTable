@@ -5,11 +5,6 @@ namespace AzureCloudTable.Api
 {
     public class PartitionSchema<TDomainObject> where TDomainObject : class, new()
     {
-        public PartitionSchema()
-        {
-            CloudTableEntities = new List<CloudTableEntity<TDomainObject>>();
-        }
-
         public PartitionSchema(string partitionName, Func<TDomainObject, bool> validationMethod,
             object partitionIndexedProperty = null)
         {
