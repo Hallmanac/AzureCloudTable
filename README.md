@@ -32,7 +32,27 @@ These additional PartitionKey based indexes keep an a copy of the POCO as a Fat 
 
 Since there are additional partition keys used for grouping/categorizing parts of the POCO together I created the additional "IndexedProperty" property to allow for one more level of filtering. The client code (through a repository pattern) would map a property from the POCO to the "IndexedProperty" of the "CloudTableEntity<TDomainObject>" class. Then, when searching on that partition, the client would filter on the "IndexedProperty".
 
-More documentation to come...
+Okay, enough blathering and here's some code examples of it in use.
+
+          public class User
+          {
+               public User() {}
+               
+               public string FirstName { get; set; }
+               public string LastName { get; set; }
+          }
+          
+          public class UserRepository
+          {
+               private readonly string _firstNamePartitionKey = "FirstName";
+               private readonly string _userTypePartitionKey = typeof(User).Name;
+               private CloudTableContext<User> _userTableContext;
+               
+               public UserRepository()
+               {
+                    More documentation to come...
+               }
+          }
 
 
 
