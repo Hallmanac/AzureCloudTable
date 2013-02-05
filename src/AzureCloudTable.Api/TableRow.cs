@@ -8,7 +8,7 @@ using ServiceStack.Text;
 namespace AzureCloudTable.Api
 {
     /// <summary>
-    /// WARNING: This implementation has issues and is not complete. Use for research purposes or finish the implementation. --- 
+    /// WARNING: This class has issues and is not complete. Use for research purposes or finish the implementation. It was made internal for a reason. --- 
     /// This class breaks apart an object into EntityProperties if possible. If the property is another Class type (i.e. reference object) then
     /// that property is serialized as JSON and stored as a string in Table storage as long as it fits within the 64KB limit.
     /// </summary>
