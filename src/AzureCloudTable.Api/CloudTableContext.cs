@@ -7,6 +7,11 @@ using ServiceStack.Text;
 
 namespace AzureCloudTable.Api
 {
+    /// <summary>
+    /// Class used to wrap a domain entity for use with Azure Table Storage via using PartitionKey strategies (known as PartitionSchemas) 
+    /// for grouping and filtering.
+    /// </summary>
+    /// <typeparam name="TDomainEntity"></typeparam>
     public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
     {
         private CloudTable _table;
@@ -17,13 +22,21 @@ namespace AzureCloudTable.Api
         private CloudTableEntity<TableMetaData<TDomainEntity>> _tableMetaDataEntity;
         private TableReadWriteContext<CloudTableEntity<TableMetaData<TDomainEntity>>> _metadataReadWriteContext;  
 
-        public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty)
+        /*public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty)
         {
             var tableName = string.Format("{0}Table", typeof(TDomainEntity).Name);
             Init(storageAccount, nameOfEntityIdProperty, tableName);
-        }
+        }*/
 
-        public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName)
+        /// <summary>
+        /// Initializes a new CloudTableContext object. If the <param name="tableName"></param> parameter is left null, then the default 
+        /// naming scheme used is the name of the generic type's name with "Table" appended to it. For example "SomeClass" + "Table" for
+        /// the table name of "SomeClassTable".
+        /// </summary>
+        /// <param name="storageAccount"></param>
+        /// <param name="nameOfEntityIdProperty"></param>
+        /// <param name="tableName"></param>
+        public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName = null)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TDomainEntity).Name) : tableName;
             Init(storageAccount, nameOfEntityIdProperty, tableName);
@@ -37,13 +50,24 @@ namespace AzureCloudTable.Api
         /// </summary>
         public string NameOfEntityIdProperty { get; set; }
 
+        /// <summary>
+        /// Gets the default partition schema used for the table.
+        /// </summary>
         public PartitionSchema<TDomainEntity> DefaultSchema { get; private set; }
 
+        /// <summary>
+        /// Returns a TableReadWriteContext class which allows for more options in constructing custom queries against the table.
+        /// </summary>
+        /// <returns></returns>
         public TableReadWriteContext<CloudTableEntity<TDomainEntity>> TableQueryContext()
         {
             return _tableReadWriteContext;
         }
 
+        /// <summary>
+        /// Adds multiple PartitionSchema types to the current CloudTableContext. 
+        /// </summary>
+        /// <param name="partitionSchemas"></param>
         public void AddMultiplePartitionSchemas(List<PartitionSchema<TDomainEntity>> partitionSchemas)
         {
             var canWritePartition = false;
@@ -57,6 +81,10 @@ namespace AzureCloudTable.Api
                 _metadataReadWriteContext.InsertOrReplace(_tableMetaDataEntity);
         }
 
+        /// <summary>
+        /// Adds a single PartitionSchema to the current CloudTableContext.
+        /// </summary>
+        /// <param name="partitionSchema"></param>
         public void AddPartitionSchema(PartitionSchema<TDomainEntity> partitionSchema)
         {
             if (PartitionExists(partitionSchema.PartitionName)) return;
@@ -64,6 +92,10 @@ namespace AzureCloudTable.Api
             _metadataReadWriteContext.InsertOrReplace(_tableMetaDataEntity);
         }
 
+        /// <summary>
+        /// Executes a single "InsertOrMerge" table operation.
+        /// </summary>
+        /// <param name="domainEntity"></param>
         public void InsertOrMerge(TDomainEntity domainEntity)
         {
             var cloudTableEntity = new CloudTableEntity<TDomainEntity>
@@ -78,6 +110,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a batch "InsertOrMerge" table operation.
+        /// </summary>
+        /// <param name="domainEntities"></param>
         public void InsertOrMerge(TDomainEntity[] domainEntities)
         {
             foreach (var domainEntity in domainEntities)
@@ -95,6 +131,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a single "InsertOrReplace" table operation.
+        /// </summary>
+        /// <param name="domainEntity"></param>
         public void InsertOrReplace(TDomainEntity domainEntity)
         {
             var cloudTableEntity = new CloudTableEntity<TDomainEntity>
@@ -109,6 +149,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes batch "InsertOrReplace" table operation.
+        /// </summary>
+        /// <param name="domainEntities"></param>
         public void InsertOrReplace(TDomainEntity[] domainEntities)
         {
             foreach (var domainEntity in domainEntities)
@@ -126,6 +170,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a single "Insert" table operation.
+        /// </summary>
+        /// <param name="domainEntity"></param>
         public void Insert(TDomainEntity domainEntity)
         {
             var cloudTableEntity = new CloudTableEntity<TDomainEntity>
@@ -140,6 +188,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a batch "Insert" table operation.
+        /// </summary>
+        /// <param name="domainEntities"></param>
         public void Insert(TDomainEntity[] domainEntities)
         {
             foreach (var domainEntity in domainEntities)
@@ -157,6 +209,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a single "Delete" table operation.
+        /// </summary>
+        /// <param name="domainEntity"></param>
         public void Delete(TDomainEntity domainEntity)
         {
             var cloudTableEntity = new CloudTableEntity<TDomainEntity>
@@ -171,6 +227,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a batch "Delete" table operation.
+        /// </summary>
+        /// <param name="domainEntities"></param>
         public void Delete(TDomainEntity[] domainEntities)
         {
             foreach (var domainEntity in domainEntities)
@@ -188,6 +248,10 @@ namespace AzureCloudTable.Api
             }
         }
 
+        /// <summary>
+        /// Executes a single "Replace" table operation.
+        /// </summary>
+        /// <param name="domainEntity"></param>
         public void Replace(TDomainEntity domainEntity)
         {
             var cloudTableEntity = new CloudTableEntity<TDomainEntity>
@@ -203,7 +267,7 @@ namespace AzureCloudTable.Api
         }
 
         /// <summary>
-        /// Replaces an array of Domain Entities in all Partition Schemas associated with the current CloudTableContext.
+        /// Executes a batch "Replace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
         public void Replace(TDomainEntity[] domainEntities)
@@ -252,6 +316,11 @@ namespace AzureCloudTable.Api
                     .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
+        /// <summary>
+        /// Retrieves all domain entities within a given PartitionSchema.
+        /// </summary>
+        /// <param name="partitionSchema"></param>
+        /// <returns></returns>
         public IEnumerable<TDomainEntity> GetAllInPartitionSchema(PartitionSchema<TDomainEntity> partitionSchema)
         {
             return
@@ -259,6 +328,13 @@ namespace AzureCloudTable.Api
                     .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
+        /// <summary>
+        /// Retrieves a set of domain entities based on a given PartitionScheme and an optional RowKey range.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="minRowKey"></param>
+        /// <param name="maxRowKey"></param>
+        /// <returns></returns>
         public IEnumerable<TDomainEntity> GetByPartitionSchemaWithRowkeyRange(string partitionKey, string minRowKey = "",
             string maxRowKey = "")
         {
@@ -267,6 +343,13 @@ namespace AzureCloudTable.Api
                     .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
+        /// <summary>
+        /// Gets a set of domain entities based on a given ParitionSchema with a filter based on the <param name="indexedProperty"></param> that 
+        /// gets passed in.
+        /// </summary>
+        /// <param name="schema"></param>
+        /// <param name="indexedProperty"></param>
+        /// <returns></returns>
         public IEnumerable<TDomainEntity> GetByPartitionFilteredOnIndexProperty(PartitionSchema<TDomainEntity> schema, object indexedProperty)
         {
             var indexedPropertyJsv = indexedProperty.ToJsv();
