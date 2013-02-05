@@ -65,14 +65,14 @@ namespace AzureCloudTable.Api
             return entityDictionary;
         }
 
-        private string SetDefaultRowKey()
+        public string SetDefaultRowKey()
         {
             string defaultRowKeyByTime = string.Format("{0:d19}",
                 (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks));
             return defaultRowKeyByTime + "_" + Guid.NewGuid().SerializeToString();
         }
 
-        private string SetDefaultPartitionKey()
+        public string SetDefaultPartitionKey()
         {
             var defaultGuid = default(Guid);
             return defaultGuid.ToString();

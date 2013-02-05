@@ -30,6 +30,8 @@ namespace AzureCloudTable.Api
             _table.CreateIfNotExists();
         }
 
+        public CloudTable Table { get { return _table; } }
+
         public void InsertOrMerge(TAzureTableEntity tableEntity)
         {
             TableOperation updateOperation = TableOperation.InsertOrMerge(tableEntity);
