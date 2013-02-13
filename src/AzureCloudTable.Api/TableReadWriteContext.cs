@@ -113,7 +113,10 @@ namespace AzureCloudTable.Api
 
         public TAzureTableEntity Find(string partitionKey, string rowKey)
         {
-            return (TAzureTableEntity)_table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey)).Result;
+            var retrieve = _table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
+            var result = retrieve.Result;
+            return (TAzureTableEntity)result;
+            //return (TAzureTableEntity)_table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey)).Result;
         }
 
         public IEnumerable<TAzureTableEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",

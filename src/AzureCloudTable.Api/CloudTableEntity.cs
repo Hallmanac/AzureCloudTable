@@ -33,14 +33,14 @@ namespace AzureCloudTable.Api
         public DateTimeOffset Timestamp { get; set; }
         public string ETag { get; set; }
 
-        public object IndexedProperty { get; set; }
+        public IndexedObject IndexedProperty { get; set; }
 
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
             EntityProperty indexedEntityProperty;
             if(properties.TryGetValue(this.GetPropertyName(() => IndexedProperty), out indexedEntityProperty))
             {
-                IndexedProperty = indexedEntityProperty.StringValue.FromJsv<object>();
+                IndexedProperty = indexedEntityProperty.StringValue.FromJsv<IndexedObject>();
             }
             ReadFatEntity(properties);
         }
@@ -50,7 +50,7 @@ namespace AzureCloudTable.Api
             var entityDictionary = WriteFatEntity(DomainObjectInstance);
             if(IndexedProperty != null)
             {
-                string complexTypeSerialized = JsonSerializer.SerializeToString(IndexedProperty, typeof(Object));
+                string complexTypeSerialized = IndexedProperty.ToJsv();
                 if((complexTypeSerialized.Length > 63997))
                 {
                     string truncatedType = complexTypeSerialized.Substring(0, 63999);
@@ -85,18 +85,19 @@ namespace AzureCloudTable.Api
             {
                 if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == this.GetPropertyName(()=> IndexedProperty) || entityProperty.Value.PropertyType != EdmType.String)
                     continue;
-                combinedFatEntity.Append(entityProperty.Value);
+                combinedFatEntity.Append(entityProperty.Value.StringValue);
+                //combinedFatEntity += entityProperty.Value.StringValue;
             }
             var fatEntityString = combinedFatEntity.ToString();
-            var transitionObject = fatEntityString.FromJsv<Object>();
-            DomainObjectInstance = transitionObject as TDomainObject;
+            var transitionObject = fatEntityString.FromJsv<TDomainObject>();
+            DomainObjectInstance = transitionObject;
             if(DomainObjectInstance == null)
             {
                 DomainObjectInstance = new TDomainObject();
             }
         }
 
-        private IDictionary<string, EntityProperty> WriteFatEntity(object givenObject)
+        private IDictionary<string, EntityProperty> WriteFatEntity(TDomainObject givenObject)
         {
             var fatEntityDictionary = new Dictionary<string, EntityProperty>();
 
@@ -106,12 +107,12 @@ namespace AzureCloudTable.Api
                                        //this but hey, that's how I roll.
             int stringLength = serializedObject.Length;
             int dictionaryCount = fatEntityDictionary.Count;
-            for(int i = 0;i <= stringLength;i += maxStringBlockSize)
+            for(int i = 0;i < stringLength;i += maxStringBlockSize)
             {
                 if((i + maxStringBlockSize) > stringLength)
-                    maxStringBlockSize = stringLength - i;
+                    maxStringBlockSize = (stringLength - i);
                 string entityValue = serializedObject.Substring(i, maxStringBlockSize);
-                string entityKey = string.Format("{0:D2}", dictionaryCount);
+                string entityKey = string.Format("E{0:D2}", (dictionaryCount + 1));
                 if(fatEntityDictionary.Count < 15)
                 {
                     fatEntityDictionary.Add(entityKey, new EntityProperty(entityValue));
