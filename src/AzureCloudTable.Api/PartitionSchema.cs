@@ -33,15 +33,15 @@ namespace AzureCloudTableContext.Api
         ///         <example>entity => entity.SomeProperty</example>
         ///     </para>
         /// </param>
-        /// <param name="setRowKeyValue">
+        /// <param name="setRowKey">
         ///     Lambda expression that sets the RowKey value. Gives the ability to map the value of an entity property
         ///     to the RowKey. Make sure your property will conform to RowKey constraints (i.e. no bigger than 1K, etc) and is unique.
         ///     <para>The default value for the RowKey will be the value of the entity's Id property.</para>
         /// </param>
-        public PartitionSchema(string schemaName = "DefaultSchemaName", Func<TDomainObject, bool> validateEntityForPartition = null, Func<TDomainObject, string> setPartitionKey = null, Func<TDomainObject, object> setIndexedPropValue = null, Func<TDomainObject, string> setRowKeyValue = null)
+        public PartitionSchema(string schemaName = "DefaultSchemaName", Func<TDomainObject, bool> validateEntityForPartition = null, Func<TDomainObject, string> setPartitionKey = null, Func<TDomainObject, object> setIndexedPropValue = null, Func<TDomainObject, string> setRowKey = null)
         {
             SchemaName = schemaName;
-            Init(validateEntityForPartition, setPartitionKey, setIndexedPropValue, setRowKeyValue);
+            Init(validateEntityForPartition, setPartitionKey, setIndexedPropValue, setRowKey);
         }
 
         /// <summary>
@@ -62,7 +62,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Called to set the RowKey of the CloudTableEntity prior to saving to the table.
         /// </summary>
-        public Func<TDomainObject, string> SetRowKeyValue { get; set; }
+        public Func<TDomainObject, string> SetRowKey { get; set; }
 
         /// <summary>
         /// Called to set the IndexedProperty of the CloudTableEntity prior to saving to the table.
@@ -76,7 +76,7 @@ namespace AzureCloudTableContext.Api
         public Dictionary<string, List<CloudTableEntity<TDomainObject>>> CloudTableEntities { get; set; }
 
         private void Init(Func<TDomainObject, bool> validationMethod, Func<TDomainObject, string> setPartitionKey, Func<TDomainObject, object> setIndexedPropValue,
-            Func<TDomainObject, string> setRowKeyValue)
+            Func<TDomainObject, string> setRowKey)
         {
             if(setPartitionKey != null)
                 SetPartitionKey = setPartitionKey;
@@ -90,10 +90,10 @@ namespace AzureCloudTableContext.Api
                 SetIndexedProperty = setIndexedPropValue;
             else
                 SetIndexedProperty = entity => null;
-            if(setRowKeyValue != null)
-                SetRowKeyValue = setRowKeyValue;
+            if(setRowKey != null)
+                SetRowKey = setRowKey;
             else
-                SetRowKeyValue = entity => null;
+                SetRowKey = entity => null;
             CloudTableEntities = new Dictionary<string, List<CloudTableEntity<TDomainObject>>>();
         }
     }

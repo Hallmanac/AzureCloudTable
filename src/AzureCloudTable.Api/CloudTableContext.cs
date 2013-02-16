@@ -573,7 +573,7 @@ namespace AzureCloudTableContext.Api
                         SavePartitionKeys();
                     }
                     
-                    tempTableEntity.RowKey = partitionSchema.SetRowKeyValue(tempTableEntity.DomainObjectInstance);
+                    tempTableEntity.RowKey = partitionSchema.SetRowKey(tempTableEntity.DomainObjectInstance);
                     if(tempTableEntity.RowKey == null)
                     {
                         if(string.IsNullOrWhiteSpace(NameOfEntityIdProperty))
