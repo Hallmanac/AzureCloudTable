@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
-namespace AzureCloudTable.Api
+namespace AzureCloudTableContext.Api
 {
     /// <summary>
     /// Class used to wrap a domain entity for use with Azure Table Storage via using PartitionKey strategies (known as PartitionSchemas) 
@@ -46,6 +46,9 @@ namespace AzureCloudTable.Api
             Init(storageAccount, nameOfEntityIdProperty, tableName);
         }
 
+        /// <summary>
+        /// Gets a list of the PartitionKeys that are used in the table.
+        /// </summary>
         public List<string> PartitionKeysInTable { get; private set; } 
         
         /// <summary>
@@ -510,7 +513,7 @@ namespace AzureCloudTable.Api
             if(_partitionMetaDataEntity != null)
             {
                 bool metaDataPkIsInList = false;
-                foreach(var partitionKeyString in _partitionMetaDataEntity.DomainObjectInstance.PartitionSchemaNames)
+                foreach(var partitionKeyString in _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys)
                 {
                     if(partitionKeyString == _tableMetaDataPartitionKey)
                         metaDataPkIsInList = true;
@@ -552,8 +555,8 @@ namespace AzureCloudTable.Api
         {
             _partitionSchemas.Add(schema);
 
-            /*if (_partitionMetaDataEntity.DomainObjectInstance.PartitionSchemaNames.All(partitionSchema => partitionSchema != schema.SchemaName))
-                _partitionMetaDataEntity.DomainObjectInstance.PartitionSchemaNames.Add(schema.SchemaName);*/
+            /*if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.All(partitionSchema => partitionSchema != schema.SchemaName))
+                _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.SchemaName);*/
         }
 
         private void ValidateTableEntityAgainstPartitionSchemas(CloudTableEntity<TDomainEntity> tableEntity)
@@ -566,13 +569,13 @@ namespace AzureCloudTable.Api
                         new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance);
                     tempTableEntity.PartitionKey = partitionSchema.SetPartitionKey(tempTableEntity.DomainObjectInstance);
                     if(
-                        _partitionMetaDataEntity.DomainObjectInstance.PartitionSchemaNames.All(
+                        _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.All(
                                                                                                schemaName =>
                                                                                                    schemaName !=
                                                                                                        tempTableEntity
                                                                                                            .PartitionKey))
                     {
-                        _partitionMetaDataEntity.DomainObjectInstance.PartitionSchemaNames.Add(tempTableEntity.PartitionKey);
+                        _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
                         SavePartitionKeys();
                     }
                     

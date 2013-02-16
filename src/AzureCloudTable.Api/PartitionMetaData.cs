@@ -1,15 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AzureCloudTable.Api
+namespace AzureCloudTableContext.Api
 {
+    /// <summary>
+    /// Used in the CloudTableContext class internally to wrap the list of PartitionKeys
+    /// that are used in an Azure Table.
+    /// </summary>
     public class PartitionMetaData
     {
-        public List<String> PartitionSchemaNames { get; set; } 
+        /// <summary>
+        /// List of PartitionKey(s) that are in the current Azure Table
+        /// </summary>
+        public List<String> PartitionKeys { get; set; } 
 
         public PartitionMetaData()
         {
-            PartitionSchemaNames = new List<String>();
+            PartitionKeys = new List<String>();
         }
     }
 }

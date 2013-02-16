@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AzureCloudTable.Api
+namespace AzureCloudTableContext.Api
 {
     /// <summary>
     ///     Class that defines a partitioning strategy to store a domain entity in Azure Table Storage.
@@ -69,6 +69,10 @@ namespace AzureCloudTable.Api
         /// </summary>
         public Func<TDomainObject, object> SetIndexedProperty { get; set; }
 
+        /// <summary>
+        /// Holds a list of CloudTableEntity objects that belong to a certain PartitionKey. This is used internally in 
+        /// the CloudTableContext class and gets dynamically built up and destroyed.
+        /// </summary>
         public Dictionary<string, List<CloudTableEntity<TDomainObject>>> CloudTableEntities { get; set; }
 
         private void Init(Func<TDomainObject, bool> validationMethod, Func<TDomainObject, string> setPartitionKey, Func<TDomainObject, object> setIndexedPropValue,

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureCloudTable.Api", "AzureCloudTable.Api\AzureCloudTable.Api.csproj", "{2F903A85-EE73-4A46-813E-83E258BA9F6B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureCloudTableContext.Api", "AzureCloudTable.Api\AzureCloudTableContext.Api.csproj", "{2F903A85-EE73-4A46-813E-83E258BA9F6B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

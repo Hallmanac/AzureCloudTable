@@ -2,9 +2,12 @@
 using System.IO;
 using System.Linq.Expressions;
 
-namespace AzureCloudTable.Api
+namespace AzureCloudTableContext.Api
 {
-    public static class ExtensionMethods
+    /// <summary>
+    /// Extension methods used with the AzureCloudTableContext.Api
+    /// </summary>
+    public static class CloudTableContextExtensionMethods
     {
         /// <summary>
         /// Get the name of a property from a property access lambda. Here are two examples:

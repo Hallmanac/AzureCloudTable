@@ -7,8 +7,8 @@
     <ProjectGuid>{2F903A85-EE73-4A46-813E-83E258BA9F6B}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>AzureCloudTable.Api</RootNamespace>
-    <AssemblyName>AzureCloudTable.Api</AssemblyName>
+    <RootNamespace>AzureCloudTableContext.Api</RootNamespace>
+    <AssemblyName>AzureCloudTableContext.Api</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -28,7 +28,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\AzureCloudTable.Api.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\AzureCloudTableContext.Api.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.WindowsAzure.Storage, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -49,7 +49,7 @@
     <Compile Include="PartitionSchema.cs" />
     <Compile Include="TableReadWriteContext.cs" />
     <Compile Include="CloudTableContext.cs" />
-    <Compile Include="ExtensionMethods.cs" />
+    <Compile Include="CloudTableContextExtensionMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PartitionMetaData.cs" />
     <Compile Include="TableRow.cs" />

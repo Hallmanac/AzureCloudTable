@@ -5,7 +5,7 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
-namespace AzureCloudTable.Api
+namespace AzureCloudTableContext.Api
 {
     /// <summary>
     /// WARNING: This class has issues and is not complete. Use for research purposes or finish the implementation. It was made internal for a reason. --- 

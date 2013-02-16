@@ -5,10 +5,17 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using ServiceStack.Text;
 
-namespace AzureCloudTable.Api
+namespace AzureCloudTableContext.Api
 {
+    /// <summary>
+    /// Wraps a POCO so that it can be stored directly into Azure Table Storage.
+    /// </summary>
+    /// <typeparam name="TDomainObject"></typeparam>
     public class CloudTableEntity<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
+        /// <summary>
+        /// 
+        /// </summary>
         public CloudTableEntity()
         {
             PartitionKey = SetDefaultPartitionKey();
@@ -17,6 +24,12 @@ namespace AzureCloudTable.Api
             IndexedProperty = new IndexedObject();
         }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="partitionKey">Sets the PartitionKey of the table entity.</param>
+        /// <param name="rowKey">Sets the RowKey of the table entity.</param>
+        /// <param name="domainObject">Sets the POCO that will be serialized to the table entity.</param>
         public CloudTableEntity(string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
         {
             PartitionKey = partitionKey ?? SetDefaultPartitionKey();
@@ -35,6 +48,10 @@ namespace AzureCloudTable.Api
         public DateTimeOffset Timestamp { get; set; }
         public string ETag { get; set; }
 
+        /// <summary>
+        /// Property that is used to hold an indexed value. This type is a wrapper around the
+        /// actual value due to serialization constraints.
+        /// </summary>
         public IndexedObject IndexedProperty { get; set; }
 
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
@@ -67,6 +84,12 @@ namespace AzureCloudTable.Api
             return entityDictionary;
         }
 
+        /// <summary>
+        /// Sets the value of the RowKey for the table entity as a padded integer based on the difference of
+        /// the max value property of the DateTimeOffset and the DateTimeOffset.Now property, followed by an
+        /// underscore and an random generated GUID.
+        /// </summary>
+        /// <returns></returns>
         public string SetDefaultRowKey()
         {
             string defaultRowKeyByTime = string.Format("{0:d19}",
@@ -74,6 +97,10 @@ namespace AzureCloudTable.Api
             return defaultRowKeyByTime + "_" + Guid.NewGuid().SerializeToString();
         }
 
+        /// <summary>
+        /// Sets the default value of the PartitionKey for the table entity as a random generated GUID.
+        /// </summary>
+        /// <returns></returns>
         public string SetDefaultPartitionKey()
         {
             var defaultGuid = default(Guid);
@@ -136,7 +163,10 @@ namespace AzureCloudTable.Api
         }
     }
 
-    internal class ObjectToLargeForFatEntityException : Exception
+    /// <summary>
+    /// Exception that is thrown when a POCO is too large to be serialized and stored in Azure table storage.
+    /// </summary>
+    public class ObjectToLargeForFatEntityException : Exception
     {
         public ObjectToLargeForFatEntityException(){}
 
@@ -146,6 +176,9 @@ namespace AzureCloudTable.Api
             GivenObject = givenObject;
         }
 
+        /// <summary>
+        /// The object that was too large to be stored.
+        /// </summary>
         public object GivenObject { get; private set; }
     }
 }
