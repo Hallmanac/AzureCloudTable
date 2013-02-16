@@ -26,12 +26,6 @@ namespace AzureCloudTableContext.Api
         private TableReadWriteContext<CloudTableEntity<PartitionMetaData>> _metadataReadWriteContext;
         private string _defaultSchemaName;
 
-        /*public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty)
-        {
-            var tableName = string.Format("{0}Table", typeof(TDomainEntity).Name);
-            Init(storageAccount, nameOfEntityIdProperty, tableName);
-        }*/
-
         /// <summary>
         /// Initializes a new CloudTableContext object. If the <param name="tableName"></param> parameter is left null, then the default 
         /// naming scheme used is the name of the generic type's name with "Table" appended to it. For example "SomeClass" + "Table" for
