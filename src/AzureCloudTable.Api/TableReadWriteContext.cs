@@ -330,6 +330,8 @@ namespace AzureCloudTable.Api
 
         private bool EntitiesAreOfTheSamePartition(TAzureTableEntity[] entities)
         {
+            if(entities == null || entities.Length < 1)
+                return false;
             var partitionName = entities[0].PartitionKey;
             return entities.All(azureTableEntity => azureTableEntity.PartitionKey == partitionName);
         }

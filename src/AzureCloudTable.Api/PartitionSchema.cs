@@ -9,17 +9,11 @@ namespace AzureCloudTable.Api
     /// <typeparam name="TDomainObject">The POCO class that is being written to Azure Table Storage</typeparam>
     public class PartitionSchema<TDomainObject> where TDomainObject : class, new()
     {
-        public PartitionSchema()
-        {
-            SchemaName = "DefaultSchemaName";
-            ValidationMethod = o => false;
-        } 
-
         /// <summary>
         ///     Creates a new PartitionScheme object.
         /// </summary>
         /// <param name="schemaName">Value that will be used as the PartitionKey in the Azure TableEntity</param>
-        /// <param name="validationMethod">
+        /// <param name="validateEntityForPartition">
         ///     Lambda expression that determines if it meets the requirements of the
         ///     partition schema. If all entities need to be in this partition simply return true. Example:
         ///     <para>entity => entity.SomeProperty == SomeValue</para>
@@ -44,18 +38,10 @@ namespace AzureCloudTable.Api
         ///     to the RowKey. Make sure your property will conform to RowKey constraints (i.e. no bigger than 1K, etc) and is unique.
         ///     <para>The default value for the RowKey will be the value of the entity's Id property.</para>
         /// </param>
-        public PartitionSchema(string schemaName, Func<TDomainObject, bool> validationMethod,
-            Func<TDomainObject, string> setPartitionKey = null, Func<TDomainObject, object> setIndexedPropValue = null,
-            Func<TDomainObject, string> setRowKeyValue = null)
+        public PartitionSchema(string schemaName = "DefaultSchemaName", Func<TDomainObject, bool> validateEntityForPartition = null, Func<TDomainObject, string> setPartitionKey = null, Func<TDomainObject, object> setIndexedPropValue = null, Func<TDomainObject, string> setRowKeyValue = null)
         {
-            if(setPartitionKey != null)
-                SetPartitionKey = setPartitionKey;
-            else
-            {
-                SetPartitionKey = entity => schemaName;
-            }
             SchemaName = schemaName;
-            Init(validationMethod, setIndexedPropValue, setRowKeyValue);
+            Init(validateEntityForPartition, setPartitionKey, setIndexedPropValue, setRowKeyValue);
         }
 
         /// <summary>
@@ -71,7 +57,7 @@ namespace AzureCloudTable.Api
         /// <summary>
         /// Called to verify whether or not the given domain entity meets the requirements to be in the current PartitionSchema.
         /// </summary>
-        public Func<TDomainObject, bool> ValidationMethod { get; set; }
+        public Func<TDomainObject, bool> ValidateEntityForPartition { get; set; }
 
         /// <summary>
         /// Called to set the RowKey of the CloudTableEntity prior to saving to the table.
@@ -83,25 +69,28 @@ namespace AzureCloudTable.Api
         /// </summary>
         public Func<TDomainObject, object> SetIndexedProperty { get; set; }
 
-        public List<CloudTableEntity<TDomainObject>> CloudTableEntities { get; set; }
+        public Dictionary<string, List<CloudTableEntity<TDomainObject>>> CloudTableEntities { get; set; }
 
-        private void Init(Func<TDomainObject, bool> validationMethod, Func<TDomainObject, object> setIndexedPropValue,
+        private void Init(Func<TDomainObject, bool> validationMethod, Func<TDomainObject, string> setPartitionKey, Func<TDomainObject, object> setIndexedPropValue,
             Func<TDomainObject, string> setRowKeyValue)
         {
-            ValidationMethod = validationMethod;
+            if(setPartitionKey != null)
+                SetPartitionKey = setPartitionKey;
+            else
+                SetPartitionKey = entity => SchemaName;
+            if(validationMethod != null)
+                ValidateEntityForPartition = validationMethod;
+            else
+                ValidateEntityForPartition = entity => false;
             if(setIndexedPropValue != null)
                 SetIndexedProperty = setIndexedPropValue;
             else
-            {
                 SetIndexedProperty = entity => null;
-            }
             if(setRowKeyValue != null)
                 SetRowKeyValue = setRowKeyValue;
             else
-            {
                 SetRowKeyValue = entity => null;
-            }
-            CloudTableEntities = new List<CloudTableEntity<TDomainObject>>();
+            CloudTableEntities = new Dictionary<string, List<CloudTableEntity<TDomainObject>>>();
         }
     }
 }

@@ -14,6 +14,7 @@ namespace AzureCloudTable.Api
             PartitionKey = SetDefaultPartitionKey();
             RowKey = SetDefaultRowKey();
             DomainObjectInstance = new TDomainObject();
+            IndexedProperty = new IndexedObject();
         }
 
         public CloudTableEntity(string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
@@ -21,6 +22,7 @@ namespace AzureCloudTable.Api
             PartitionKey = partitionKey ?? SetDefaultPartitionKey();
             RowKey = rowKey ?? SetDefaultRowKey();
             DomainObjectInstance = domainObject ?? new TDomainObject();
+            IndexedProperty = new IndexedObject();
         }
 
         /// <summary>
