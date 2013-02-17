@@ -1,4 +1,3 @@
-
 AzureCloudTable
 ===============
 
@@ -30,14 +29,14 @@ This class is perhaps the most confusing aspect of this library, but it's essent
                                                      and, in fact, the default for this property is just that.
                                                      
      Func<TDomainObject, bool> ValidateEntityForPartition --> Optional - returns false by default...
-                                                              Delegate that is used to determine of a given object
+                                                              Delegate that is used to determine if a given object
                                                               qualifies to be in this particular PartitionSchema.
                                                               
      Func<TDomainObject, string> SetRowKey --> Optional - defaults to the "Id" property of the POCO...
                                                Just like the "SetPartitionKey" this delegate defines how the 
                                                PartitionKey is determined. The default is to fall back on the 
                                                "Id" property of the given POCO (which is defined in the
-                                               CloudTableContext class.
+                                               CloudTableContext class).
                                                
      Func<TDomainObject, object> SetIndexedProperty --> Optional - defaults to null...
                                                         A delegate that defines a value that will be indexed inside
@@ -72,12 +71,12 @@ This class does a couple of interesting things. First, it wraps a POCO into a "F
 
 This is different than the Lokad.Cqrs Fat Entity in that we're using one less Entity Property for sharing the object size. The reason for this is to leave the last Entity Property open for the "IndexedProperty" that was described above.
 
-Basically, this class provides the mechanism to write a POCO to Azure Table Storage without having it implement TableEntity. This class implements it's own verion of ITableEntity under the hood to get this done.
+Basically, this class provides the mechanism to write a POCO to Azure Table Storage without having to inerit from TableEntity. This class implements it's own verion of ITableEntity under the hood to get this done.
 
 =================================
 TableReadWriteContext<TAzureTableEntity> Class
 =================================
-This class takes the most commonly used read/write commands against Azure Table Storage and wraps it up in a more easily consumable manner from client code. The *TAzureTableEntity* generic type is required to be an ITableEntity and have a parameterless constructor (like all TableEntity types). 
+This class takes the most commonly used read/write commands against Azure Table Storage and wraps it up in a more easily consumable manner from client code. The *TAzureTableEntity* generic type is required to implement ITableEntity and have a parameterless constructor (like all TableEntity types). 
 
 It handles batch table operations by insuring that the batch operation meets the "Entity Group Transaction" requirements set forth by the Azure Table Storage SDK (i.e. not larger than 4MB, no more than 100 in a transaction, etc.) It does this for you automagically so you can hand it any size array of *TAzureTableEntity* types and rest assured that it will "just work". It takes care of breaking up the array into manageable size batch operations as needed. 
 
