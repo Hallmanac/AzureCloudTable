@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using AzureCloudTable.Api;
+using AzureCloudTableContext.Api;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Auth;
 using ServiceStack.Text;
@@ -54,7 +54,7 @@ namespace Sample
             _usersInFloridaPartitionSchema = new PartitionSchema<User>(schemaName: "UsersInFlorida", validateEntityForPartition: user => user.UserAddress.State == "FL", setPartitionKey: user => "UsersInFlorida", setIndexedPropValue: user => user.UserAddress.State);
             _firstNamePartitionSchema = new PartitionSchema<User>(schemaName: "FirstName", validateEntityForPartition: user => true, setPartitionKey: user => "FirstName", setIndexedPropValue: user => user.FirstName);
             _userTypePartitionSchema = new PartitionSchema<User>(schemaName: "UserTypePartition", validateEntityForPartition: user => true, setPartitionKey: user => user.GetType().Name);
-            _userIdPartitionSchema = new PartitionSchema<User>(schemaName: "UserIdPartition", validateEntityForPartition: user => true, setPartitionKey: user => user.UserId.ToJsv(), setRowKeyValue: SetReverseChronologicalBasedRowKey);
+            _userIdPartitionSchema = new PartitionSchema<User>(schemaName: "UserIdPartition", validateEntityForPartition: user => true, setPartitionKey: user => user.UserId.ToJsv(), setRowKey: SetReverseChronologicalBasedRowKey);
             _userContext.AddMultiplePartitionSchemas(new List<PartitionSchema<User>>
                 {
                     _usersInFloridaPartitionSchema,
