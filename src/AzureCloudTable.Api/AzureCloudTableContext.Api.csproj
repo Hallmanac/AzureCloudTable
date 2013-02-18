@@ -45,12 +45,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CloudTableEntity.cs" />
-    <Compile Include="ICloudTableContext.cs" />
-    <Compile Include="ICloudTableEntity.cs" />
     <Compile Include="IndexedObject.cs" />
-    <Compile Include="IPartitionMetaData.cs" />
-    <Compile Include="IPartitionSchema.cs" />
-    <Compile Include="ITableReadWriteContext.cs" />
     <Compile Include="PartitionSchema.cs" />
     <Compile Include="TableReadWriteContext.cs" />
     <Compile Include="CloudTableContext.cs" />

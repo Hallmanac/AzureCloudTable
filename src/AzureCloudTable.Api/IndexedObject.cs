@@ -3,7 +3,7 @@
     /// <summary>
     /// Wraps the value being indexed in a CloudTableEntity.
     /// </summary>
-    public class IndexedObject
+    public class IndexedObject 
     {
         public IndexedObject()
         {

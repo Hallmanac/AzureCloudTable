@@ -7,7 +7,7 @@ namespace AzureCloudTableContext.Api
     ///     Class that defines a partitioning strategy to store a domain entity in Azure Table Storage.
     /// </summary>
     /// <typeparam name="TDomainObject">The POCO class that is being written to Azure Table Storage</typeparam>
-    public class PartitionSchema<TDomainObject> : IPartitionSchema<TDomainObject> where TDomainObject : class, new()
+    public class PartitionSchema<TDomainObject> where TDomainObject : class, new()
     {
         /// <summary>
         ///     Creates a new PartitionScheme object.

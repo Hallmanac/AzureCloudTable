@@ -11,7 +11,7 @@ namespace AzureCloudTableContext.Api
     /// Wraps a POCO so that it can be stored directly into Azure Table Storage.
     /// </summary>
     /// <typeparam name="TDomainObject"></typeparam>
-    public class CloudTableEntity<TDomainObject> : ICloudTableEntity<TDomainObject> where TDomainObject : class, new()
+    public class CloudTableEntity<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
         /// <summary>
         /// 
