@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>AzureCloudTableContext</id>
+    <version>1.0.0-beta</version>
+    <title>Azure Cloud Table Context</title>
+    <authors>Brian Hall</authors>
+    <owners>Brian Hall</owners>
+    <projectUrl>https://github.com/Hallmanac/AzureCloudTable</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>In short it enables the ability for POCO's to NOT have to inherit from TableEntity and allows for secondary indexes to be defined via a contextually managed set of partitioned keys. For a full description and the source code go to https://github.com/Hallmanac/AzureCloudTable/</description>
+    <summary>A wrapper around interacting with Azure Table Storage SDK (v2.0).</summary>
+    <releaseNotes>Initial release.</releaseNotes>
+    <tags>Azure Table Storage,</tags>
+    <dependencies>
+      <dependency id="ServiceStack.Text" version="3.9.35" />
+      <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8.0.0" />
+      <dependency id="WindowsAzure.Storage" version="2.0.4.0" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.Core" targetFramework=".NETFramework4.5" />
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.5" />
+      <frameworkAssembly assemblyName="System.Xml" targetFramework=".NETFramework4.5" />
+    </frameworkAssemblies>
+    <references>
+      <reference file="AzureCloudTableContext.Api.dll" />
+    </references>
+  </metadata>
+</package>
