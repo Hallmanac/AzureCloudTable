@@ -32,17 +32,22 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="AzureCloudTableContext.Api">
-      <HintPath>..\..\src\AzureCloudTable.Api\bin\Release\AzureCloudTableContext.Api.dll</HintPath>
+    <Reference Include="AzureCloudTableContext.Api, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\AzureCloudTableContext.1.0.0-beta\lib\net45\AzureCloudTableContext.Api.dll</HintPath>
     </Reference>
     <Reference Include="Microsoft.WindowsAzure.Storage, Version=2.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <HintPath>..\packages\WindowsAzure.Storage.2.0.3.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
+      <HintPath>..\packages\WindowsAzure.Storage.2.0.4.0\lib\net40\Microsoft.WindowsAzure.Storage.dll</HintPath>
     </Reference>
     <Reference Include="ServiceStack.Text">
       <HintPath>..\packages\ServiceStack.Text.3.9.35\lib\net35\ServiceStack.Text.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Data.Services.Client" />
+    <Reference Include="System.Xml" />
+    <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
