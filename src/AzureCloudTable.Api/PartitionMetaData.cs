@@ -7,7 +7,7 @@ namespace AzureCloudTableContext.Api
     /// Used in the CloudTableContext class internally to wrap the list of PartitionKeys
     /// that are used in an Azure Table.
     /// </summary>
-    public class PartitionMetaData
+    public class PartitionMetaData : IPartitionMetaData
     {
         /// <summary>
         /// List of PartitionKey(s) that are in the current Azure Table

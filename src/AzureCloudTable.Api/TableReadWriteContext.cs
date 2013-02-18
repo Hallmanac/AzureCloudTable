@@ -13,7 +13,7 @@ namespace AzureCloudTableContext.Api
     /// conjunction with the CloudTableEntity class to wrap a POCO.
     /// </summary>
     /// <typeparam name="TAzureTableEntity"></typeparam>
-    public class TableReadWriteContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
+    public class TableReadWriteContext<TAzureTableEntity> : ITableReadWriteContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {
         private readonly CloudTable _table;
         private readonly CloudStorageAccount _storageAccount;

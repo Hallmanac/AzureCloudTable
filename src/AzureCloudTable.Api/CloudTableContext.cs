@@ -12,7 +12,7 @@ namespace AzureCloudTableContext.Api
     /// for grouping and filtering.
     /// </summary>
     /// <typeparam name="TDomainEntity"></typeparam>
-    public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
+    public class CloudTableContext<TDomainEntity> : ICloudTableContext<TDomainEntity> where TDomainEntity : class, new()
     {
         private readonly string _tableMetaDataPartitionKey = "TableMetaData";
         private readonly string _partitionSchemasRowKey = "PartitionSchemas";
