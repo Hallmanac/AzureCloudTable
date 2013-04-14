@@ -1,6 +1,6 @@
 *To use the beta (v1.0.0) version through Nuget, type the following in the Package Manager Console:*
 
-     Install-Package AzureCloudTableStorage -Pre
+     Install-Package AzureCloudTableContext -Pre
      
 *The Nuget package is in Pre-release so it won't be searchable from the "Managage Nuget Packages" dialog.*
 
