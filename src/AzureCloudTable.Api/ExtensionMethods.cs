@@ -7,7 +7,7 @@ namespace AzureCloudTableContext.Api
     /// <summary>
     /// Extension methods used with the AzureCloudTableContext.Api
     /// </summary>
-    public static class CloudTableContextExtensionMethods
+    public static class ExtensionMethods
     {
         /// <summary>
         /// Get the name of a property from a property access lambda. Here are two examples:
