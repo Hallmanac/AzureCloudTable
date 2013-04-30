@@ -11,7 +11,7 @@ namespace AzureCloudTableContext.Api
     public class PartitionSchema<TDomainObject> where TDomainObject : class, new()
     {
         private Func<TDomainObject, bool> _partitionCriteriaMethod;
-        private Func<TDomainObject, string> _setRowKey;
+        private Func<TDomainObject, string> _getRowKeyFromCriteria;
         private Func<TDomainObject, object> _getIndexedPropertyFromCriteria;
 
         /// <summary>
@@ -38,7 +38,7 @@ namespace AzureCloudTableContext.Api
         {
             get
             {
-                return _setRowKey ?? (_setRowKey = givenObj => SetChronologicalBasedRowKey());
+                return _getRowKeyFromCriteria ?? (_getRowKeyFromCriteria = givenObj => SetChronologicalBasedRowKey());
             }
         }
 
@@ -77,19 +77,36 @@ namespace AzureCloudTableContext.Api
             PartitionKey = givenPartitionKey;
             return this;
         }
- 
+
+        /// <summary>
+        /// Sets the criteria that is used to determine if a given object qualifies for this partition scheme.
+        /// </summary>
+        /// <param name="givenCriteria"></param>
+        /// <returns></returns>
         public PartitionSchema<TDomainObject> SetSchemaPredicateCriteria(Func<TDomainObject, bool> givenCriteria )
         {
             _partitionCriteriaMethod = givenCriteria;
             return this;
         }
 
+        /// <summary>
+        /// Sets the criteria that determines the RowKey.
+        /// </summary>
+        /// <param name="givenRowKeyCriteria">If the RowKey will be based on an object other than a string
+        /// it is best to use the ToJsv() serialization method from ServiceStack.Text library.</param>
+        /// <returns></returns>
         public PartitionSchema<TDomainObject> SetRowKeyCriteria(Func<TDomainObject, string> givenRowKeyCriteria )
         {
-            _setRowKey = givenRowKeyCriteria;
+            // Need to convert the object provided in the Func to a JSV string.
+            _getRowKeyFromCriteria = givenRowKeyCriteria;
             return this;
         }
 
+        /// <summary>
+        /// Sets the criteria that determines which property is used as an searchable index on the Table Entity.
+        /// </summary>
+        /// <param name="givenIndexedPropCriteria"></param>
+        /// <returns></returns>
         public PartitionSchema<TDomainObject>  SetIndexedPropertyCriteria(Func<TDomainObject, object> givenIndexedPropCriteria )
         {
             _getIndexedPropertyFromCriteria = givenIndexedPropCriteria;
