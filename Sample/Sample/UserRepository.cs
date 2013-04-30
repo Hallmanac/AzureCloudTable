@@ -34,6 +34,7 @@ namespace Sample
             var storageAccount = new CloudStorageAccount(storageCredentials, true);
             _userContext = new CloudTableContext<User>(storageAccount,
                 this.GetPropertyName(() => _tempUserInstance.UserId));
+            
             InitPartitionSchemas();
         }
 
@@ -41,20 +42,36 @@ namespace Sample
         /// The partition schemas are how your domain object gets sorted/categorized/grouped inside Azure Table
         /// storage. You create them in your client code and then "add" them to the CloudTableContext class
         /// that you're using to interact with the Table (in this case _userContext). 
-        /// Remember, these are just schema definitions (if you will) and they have the ability to provide several
-        /// different PartitionKey id's since you are using a Func delegate to define a PartitionKey naming strategy.
-        /// For the most part, you will simply reference the "SchemaName" property on the PartitionSchema class but 
-        /// there are times where a PartitionSchema (strategy) will yield several PartitionKey id's. One such example
-        /// is the _userIdPartitionSchema in this class. You are creating a PartitionKey based on the unique ID of
-        /// each User instance. This could be used to keep track of versions (such as would be used in an Event Sourcing
-        /// type of architecture).
+        /// Remember, these are just schema definitions for one particular PartitionKey.
+        /// 
+        /// There is a DefaultSchema that get set on the CloudTableContext class automatically (in this case _userContext)
+        /// which sets the PartitionKey to be the name of the object Type and the RowKey based on the Id property of the object
+        /// provided during intialization.
         /// </summary>
         private void InitPartitionSchemas()
         {
-            _usersInFloridaPartitionSchema = new PartitionSchema<User>(schemaName: "UsersInFlorida", validateEntityForPartition: user => user.UserAddress.State == "FL", setPartitionKey: user => "UsersInFlorida", setIndexedPropValue: user => user.UserAddress.State);
-            _firstNamePartitionSchema = new PartitionSchema<User>(schemaName: "FirstName", validateEntityForPartition: user => true, setPartitionKey: user => "FirstName", setIndexedPropValue: user => user.FirstName);
-            _userTypePartitionSchema = new PartitionSchema<User>(schemaName: "UserTypePartition", validateEntityForPartition: user => true, setPartitionKey: user => user.GetType().Name);
-            _userIdPartitionSchema = new PartitionSchema<User>(schemaName: "UserIdPartition", validateEntityForPartition: user => true, setPartitionKey: user => user.UserId.ToJsv(), setRowKey: SetReverseChronologicalBasedRowKey);
+            _usersInFloridaPartitionSchema = new PartitionSchema<User>()
+                .SetPartitionKey("UsersInFlorida")
+                .SetSchemaPredicateCriteria(user => user.UserAddress.State == "FL")
+                .SetIndexedPropertyCriteria(user => user.UserAddress.State);
+                
+            _firstNamePartitionSchema = new PartitionSchema<User>()
+                .SetPartitionKey("FirstName")
+                .SetSchemaPredicateCriteria(user => true)
+                .SetIndexedPropertyCriteria(user => user.FirstName);
+
+            _userTypePartitionSchema = new PartitionSchema<User>()
+                .SetPartitionKey("UserTypePartition")
+                .SetSchemaPredicateCriteria(user => true)
+                .SetRowKeyCriteria(user => user.UserId.ToJsv())
+                .SetIndexedPropertyCriteria(user => user.GetType().Name);
+
+            _userIdPartitionSchema = new PartitionSchema<User>()
+                .SetPartitionKey("UserIdPartition")
+                .SetSchemaPredicateCriteria(user => true)
+                .SetRowKeyCriteria(user => PartitionSchema<User>.GetChronologicalBasedRowKey())
+                .SetIndexedPropertyCriteria(user => user.UserId);
+                
             _userContext.AddMultiplePartitionSchemas(new List<PartitionSchema<User>>
                 {
                     _usersInFloridaPartitionSchema,
@@ -81,24 +98,17 @@ namespace Sample
 
         public IEnumerable<User> GetUsersThatLiveInFlorida()
         {
-            return _userContext.GetByPartitionKey(_usersInFloridaPartitionSchema.SchemaName);
+            return _userContext.GetByPartitionKey(_usersInFloridaPartitionSchema.PartitionKey);
         }
 
         public IEnumerable<User> GetUsersByFirstName(string firstName)
         {
-            return _userContext.QueryWhereIndexedPropertyEquals(_firstNamePartitionSchema.SchemaName, firstName).ToList();
+            return _userContext.QueryWhereIndexedPropertyEquals(_firstNamePartitionSchema.PartitionKey, firstName).ToList();
         }
 
         public IEnumerable<User> GetAllVersions(User givenUser)
         {
-            var givenUserPartitionKey = _userIdPartitionSchema.SetPartitionKey(givenUser);
-            return _userContext.GetByPartitionKey(givenUserPartitionKey);
-        }
-
-        private string SetReverseChronologicalBasedRowKey(User arg)
-        {
-            return string.Format("{0:D20}_{1}", (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.Now.Ticks),
-                default(Guid).ToJsv());
+            return _userContext.QueryWhereIndexedPropertyEquals(_userIdPartitionSchema.PartitionKey, givenUser.UserId);
         }
     }
 }

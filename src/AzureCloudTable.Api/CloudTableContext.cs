@@ -314,7 +314,7 @@ namespace AzureCloudTableContext.Api
         /// <param name="partitionKey"></param>
         /// <param name="indexedProperty"></param>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> QueryWhereIndexedPropertyEquals(string partitionKey, object indexedProperty)
+        public IEnumerable<TDomainEntity> GetByIndexedProperty(string partitionKey, object indexedProperty)
         {
             var tempCloudTableEntity = new CloudTableEntity<TDomainEntity>
                 {

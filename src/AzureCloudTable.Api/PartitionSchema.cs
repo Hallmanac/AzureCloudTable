@@ -38,7 +38,7 @@ namespace AzureCloudTableContext.Api
         {
             get
             {
-                return _getRowKeyFromCriteria ?? (_getRowKeyFromCriteria = givenObj => SetChronologicalBasedRowKey());
+                return _getRowKeyFromCriteria ?? (_getRowKeyFromCriteria = givenObj => GetChronologicalBasedRowKey());
             }
         }
 
@@ -57,7 +57,7 @@ namespace AzureCloudTableContext.Api
         /// A string for a row key that provides a default ordering of oldest to newest.
         /// </summary>
         /// <returns></returns>
-        public string SetChronologicalBasedRowKey()
+        public static string GetChronologicalBasedRowKey()
         {
             return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), Guid.NewGuid().ToJsv());
         }
@@ -66,12 +66,17 @@ namespace AzureCloudTableContext.Api
         /// A Row key that can be used for an ordering of newest to oldest.
         /// </summary>
         /// <returns></returns>
-        public string SetReverseChronologicalBasedRowKey()
+        public static string GetReverseChronologicalBasedRowKey()
         {
             return string.Format("{0:D20}_{1}", (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.Now.Ticks),
                                  Guid.NewGuid());
         }
 
+        /// <summary>
+        /// Sets the one and only partition key related to this schema.
+        /// </summary>
+        /// <param name="givenPartitionKey"></param>
+        /// <returns></returns>
         public PartitionSchema<TDomainObject> SetPartitionKey(string givenPartitionKey)
         {
             PartitionKey = givenPartitionKey;
