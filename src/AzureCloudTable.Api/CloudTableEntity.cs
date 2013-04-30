@@ -103,7 +103,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public string SetDefaultPartitionKey()
         {
-            var defaultGuid = default(Guid);
+            var defaultGuid = Guid.NewGuid();
             return defaultGuid.ToString();
         }
 
