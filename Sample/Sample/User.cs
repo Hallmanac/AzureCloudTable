@@ -21,5 +21,14 @@ namespace Sample
         public int ZipCode { get; set; }
     }
 
+    public class Admin : User
+    {
+        public string Employee { get; set; }
+    }
+
+    public class Standard : User
+    {
+        public string Manager { get; set; }
+    }
     
 }
