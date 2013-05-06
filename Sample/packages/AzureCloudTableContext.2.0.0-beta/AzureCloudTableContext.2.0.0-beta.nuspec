@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>AzureCloudTableContext</id>
+    <version>2.0.0-beta</version>
+    <title>Azure Cloud Table Context</title>
+    <authors>Brian Hall</authors>
+    <owners>Brian Hall</owners>
+    <projectUrl>https://github.com/Hallmanac/AzureCloudTable</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>In short it enables the ability for POCO's to NOT have to inherit from TableEntity and allows for secondary indexes to be defined via a contextually managed set of partitioned keys. For a full description and the source code go to https://github.com/Hallmanac/AzureCloudTable/</description>
+    <summary>A wrapper around interacting with Azure Table Storage SDK (v2.0).</summary>
+    <releaseNotes>2.0.0 - Added type information to the CloudTableEntity. Changed the serialization to include type information. Changed the default RowKey to be based on the ID of the provided TDomainObject. Fixed bugs related to batch commits.
+
+1.1.2 - Renamed some fluent api methods, added a static way to set the RowKeyCriteria to be a Chronological based (or Reverse Chronological Based) row key.
+
+1.1.0 - Made breaking changes to API. Simplified it to have only one partition key per schema.</releaseNotes>
+    <tags>Azure Table Storage,</tags>
+    <dependencies>
+      <dependency id="ServiceStack.Text" version="3.9.35" />
+      <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="1.8.0.0" />
+      <dependency id="WindowsAzure.Storage" version="2.0.4.0" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.Core" targetFramework=".NETFramework4.5" />
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.5" />
+      <frameworkAssembly assemblyName="System.Xml" targetFramework=".NETFramework4.5" />
+    </frameworkAssemblies>
+  </metadata>
+</package>
