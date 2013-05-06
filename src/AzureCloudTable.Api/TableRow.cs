@@ -41,7 +41,7 @@ namespace AzureCloudTableContext.Api
             IsMappedAsFatEntity = isMappedAsFatEntity;
             Metadata = new Dictionary<string, object>();
             _storageAccount = storageAccount;
-            ReadWriteReadWriteContext = new TableReadWriteContext<TableRow<TDomainObject>>(storageAccount);
+            AccessAccessContext = new TableAccessContext<TableRow<TDomainObject>>(storageAccount);
         }
 
         /// <summary>
@@ -49,7 +49,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         public TDomainObject DomainObjectInstance { get; set; }
 
-        public TableReadWriteContext<TableRow<TDomainObject>> ReadWriteReadWriteContext { get; set; }
+        public TableAccessContext<TableRow<TDomainObject>> AccessAccessContext { get; set; }
 
         /// <summary>
         ///     Dictionary property used to add additional metadata related to the storing of the TDomainObject
