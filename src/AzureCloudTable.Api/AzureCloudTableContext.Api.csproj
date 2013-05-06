@@ -45,7 +45,7 @@
     <Compile Include="CloudTableEntity.cs" />
     <Compile Include="IndexedObject.cs" />
     <Compile Include="PartitionSchema.cs" />
-    <Compile Include="TableReadWriteContext.cs" />
+    <Compile Include="TableAccessContext.cs" />
     <Compile Include="CloudTableContext.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

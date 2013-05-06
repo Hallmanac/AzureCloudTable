@@ -7,6 +7,8 @@ using ServiceStack.Text;
 
 namespace AzureCloudTableContext.Api
 {
+    using System.Diagnostics;
+
     /// <summary>
     /// Wraps a POCO so that it can be stored directly into Azure Table Storage.
     /// </summary>
@@ -43,6 +45,8 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         public TDomainObject DomainObjectInstance { get; set; }
 
+        public string DomainObjectType { get; set; }
+
         public string PartitionKey { get; set; }
         public string RowKey { get; set; }
         public DateTimeOffset Timestamp { get; set; }
@@ -53,13 +57,19 @@ namespace AzureCloudTableContext.Api
         /// actual value due to serialization constraints.
         /// </summary>
         public IndexedObject IndexedProperty { get; set; }
-
+        
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
             EntityProperty indexedEntityProperty;
+            EntityProperty domainObjType;
             if(properties.TryGetValue(this.GetPropertyName(() => IndexedProperty), out indexedEntityProperty))
             {
-                IndexedProperty = indexedEntityProperty.StringValue.FromJsv<IndexedObject>();
+                var serializer = new JsonSerializer<IndexedObject>();
+                IndexedProperty = serializer.DeserializeFromString(indexedEntityProperty.StringValue);
+            }
+            if(properties.TryGetValue(this.GetPropertyName(() => DomainObjectType), out domainObjType))
+            {
+                DomainObjectType = domainObjType.StringValue;
             }
             ReadFatEntity(properties);
         }
@@ -67,19 +77,20 @@ namespace AzureCloudTableContext.Api
         public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
         {
             var entityDictionary = WriteFatEntity(DomainObjectInstance);
-            if(IndexedProperty != null)
+            if(IndexedProperty == null)
+                IndexedProperty = new IndexedObject();
+            DomainObjectType = GetAssemblyQualifiedName();
+            entityDictionary.Add(this.GetPropertyName(() => DomainObjectType), new EntityProperty(DomainObjectType));
+            string complexTypeSerialized = JsonSerializer.SerializeToString(IndexedProperty, IndexedProperty.GetType());
+            if((complexTypeSerialized.Length > 63997))
             {
-                string complexTypeSerialized = IndexedProperty.ToJsv();
-                if((complexTypeSerialized.Length > 63997))
-                {
-                    string truncatedType = complexTypeSerialized.Substring(0, 63999);
-                    entityDictionary.Add(this.GetPropertyName(() => IndexedProperty), new EntityProperty(truncatedType));
-                }
-                else
-                {
-                    entityDictionary.Add(this.GetPropertyName(() => IndexedProperty),
-                        new EntityProperty(complexTypeSerialized));
-                }
+                string truncatedType = complexTypeSerialized.Substring(0, 63999);
+                entityDictionary.Add(this.GetPropertyName(() => IndexedProperty), new EntityProperty(truncatedType));
+            }
+            else
+            {
+                entityDictionary.Add(this.GetPropertyName(() => IndexedProperty),
+                    new EntityProperty(complexTypeSerialized));
             }
             return entityDictionary;
         }
@@ -107,18 +118,31 @@ namespace AzureCloudTableContext.Api
             return defaultGuid.ToString();
         }
 
+        private string GetAssemblyQualifiedName()
+        {
+            if(DomainObjectInstance != null)
+            {
+                var assemblyQualifiedName = DomainObjectInstance.GetType().AssemblyQualifiedName;
+                if(assemblyQualifiedName != null) {
+                    var typeArray = assemblyQualifiedName.Split(" ".ToCharArray());
+                    return typeArray[0] + " " + typeArray[1].Replace(",", "");
+                }
+            }
+            return "";
+        }
+
         private void ReadFatEntity(IEnumerable<KeyValuePair<string, EntityProperty>> entityProperties)
         {
+            var serializer = new JsonSerializer<TDomainObject>();
             var combinedFatEntity = new StringBuilder();
             foreach(var entityProperty in entityProperties)
             {
-                if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == this.GetPropertyName(()=> IndexedProperty) || entityProperty.Value.PropertyType != EdmType.String)
+                if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == this.GetPropertyName(()=> IndexedProperty) || entityProperty.Key == this.GetPropertyName(() => DomainObjectType) || entityProperty.Value.PropertyType != EdmType.String)
                     continue;
                 combinedFatEntity.Append(entityProperty.Value.StringValue);
-                //combinedFatEntity += entityProperty.Value.StringValue;
             }
             var fatEntityString = combinedFatEntity.ToString();
-            var transitionObject = fatEntityString.FromJsv<TDomainObject>();
+            var transitionObject = (TDomainObject)JsonSerializer.DeserializeFromString(fatEntityString, Type.GetType(DomainObjectType));
             DomainObjectInstance = transitionObject;
             if(DomainObjectInstance == null)
             {
@@ -129,8 +153,7 @@ namespace AzureCloudTableContext.Api
         private IDictionary<string, EntityProperty> WriteFatEntity(TDomainObject givenObject)
         {
             var fatEntityDictionary = new Dictionary<string, EntityProperty>();
-
-            string serializedObject = givenObject.ToJsv();
+            string serializedObject = JsonSerializer.SerializeToString(givenObject, givenObject.GetType());
             int maxStringBlockSize = 63997; //This is a "just in case". I found that when an object is serialized to a UTF-8 encoded 
                                        //string and is saved to a txt file it eats up an additional 3 Bytes. Probably over thinking
                                        //this but hey, that's how I roll.
@@ -142,7 +165,7 @@ namespace AzureCloudTableContext.Api
                     maxStringBlockSize = (stringLength - i);
                 string entityValue = serializedObject.Substring(i, maxStringBlockSize);
                 string entityKey = string.Format("E{0:D2}", (dictionaryCount + 1));
-                if(fatEntityDictionary.Count < 15)
+                if(fatEntityDictionary.Count < 14)
                 {
                     fatEntityDictionary.Add(entityKey, new EntityProperty(entityValue));
                 }
