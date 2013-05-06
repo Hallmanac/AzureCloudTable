@@ -13,17 +13,44 @@ namespace AzureCloudTableContext.Api
         private Func<TDomainObject, bool> _partitionCriteriaMethod;
         private Func<TDomainObject, string> _getRowKeyFromCriteria;
         private Func<TDomainObject, object> _getIndexedPropertyFromCriteria;
+        private string _partitionKey;
+
+        /// <summary>
+        /// Constructor of a new PartitionSchema object that takes in the string name of the property that defines
+        /// the ID of the domain object.
+        /// </summary>
+        /// <param name="nameOfIdProperty"></param>
+        public PartitionSchema(string nameOfIdProperty)
+        {
+            CloudTableEntities = new List<CloudTableEntity<TDomainObject>>();
+            NameOfIdProperty = nameOfIdProperty;
+        }
 
         /// <summary>
         /// Partition Key.
         /// </summary>
-        public string PartitionKey { get; private set; }
+        public string PartitionKey 
+        { 
+            get
+            {
+                if(string.IsNullOrWhiteSpace(_partitionKey))
+                {
+                    _partitionKey = typeof(TDomainObject).Name;
+                }
+                return _partitionKey;
+            } 
+        }
+
+        /// <summary>
+        /// String name of the property that defines the ID of the domain object.
+        /// </summary>
+        public string NameOfIdProperty { get; private set; }
         
         /// <summary>
         /// Called to verify whether or not the given domain entity meets the requirements to be in the current PartitionSchema.
         /// Default is to return true.
         /// </summary>
-        public Func<TDomainObject, bool> CheckAgainstPartitionCriteria
+        public Func<TDomainObject, bool> DomainObjectMatchesPartitionCriteria
         {
             get
             {
@@ -38,7 +65,22 @@ namespace AzureCloudTableContext.Api
         {
             get
             {
-                return _getRowKeyFromCriteria ?? (_getRowKeyFromCriteria = givenObj => GetChronologicalBasedRowKey());
+                if(_getRowKeyFromCriteria == null)
+                {
+                    if(!string.IsNullOrWhiteSpace(NameOfIdProperty))
+                    {
+                        _getRowKeyFromCriteria = entity =>
+                        {
+                            var propInfo = typeof(TDomainObject).GetProperty(NameOfIdProperty);
+                            var propValue = propInfo.GetValue(entity);
+                            return JsonSerializer.SerializeToString(propValue, propValue.GetType());
+                        };
+                    } else
+                    {
+                        _getRowKeyFromCriteria = entity => GetChronologicalBasedRowKey();
+                    }
+                }
+                return _getRowKeyFromCriteria;
             }
         }
 
@@ -57,16 +99,13 @@ namespace AzureCloudTableContext.Api
         /// A string for a row key that provides a default ordering of oldest to newest.
         /// </summary>
         /// <returns></returns>
-        public static string GetChronologicalBasedRowKey()
+        private string GetChronologicalBasedRowKey()
         {
             return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), Guid.NewGuid().ToJsv());
         }
 
-        /// <summary>
-        /// A Row key that can be used for an ordering of newest to oldest.
-        /// </summary>
-        /// <returns></returns>
-        public static string GetReverseChronologicalBasedRowKey()
+        
+        private string GetReverseChronologicalBasedRowKey()
         {
             return string.Format("{0:D20}_{1}", (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.Now.Ticks),
                                  Guid.NewGuid());
@@ -79,7 +118,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public PartitionSchema<TDomainObject> SetPartitionKey(string givenPartitionKey)
         {
-            PartitionKey = givenPartitionKey;
+            _partitionKey = givenPartitionKey;
             return this;
         }
 
@@ -88,7 +127,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenCriteria"></param>
         /// <returns></returns>
-        public PartitionSchema<TDomainObject> SetSchemaPredicateCriteria(Func<TDomainObject, bool> givenCriteria )
+        public PartitionSchema<TDomainObject> SetSchemaCriteria(Func<TDomainObject, bool> givenCriteria )
         {
             _partitionCriteriaMethod = givenCriteria;
             return this;
@@ -98,11 +137,11 @@ namespace AzureCloudTableContext.Api
         /// Sets the criteria that determines the RowKey.
         /// </summary>
         /// <param name="givenRowKeyCriteria">If the RowKey will be based on an object other than a string
-        /// it is best to use the ToJsv() serialization method from ServiceStack.Text library.</param>
+        /// it is best to use the JsonSerializer.SerializeToString(objectToSerialize, Type) serialization method 
+        /// from ServiceStack.Text library.</param>
         /// <returns></returns>
         public PartitionSchema<TDomainObject> SetRowKeyCriteria(Func<TDomainObject, string> givenRowKeyCriteria )
         {
-            // Need to convert the object provided in the Func to a JSV string.
             _getRowKeyFromCriteria = givenRowKeyCriteria;
             return this;
         }
@@ -117,5 +156,7 @@ namespace AzureCloudTableContext.Api
             _getIndexedPropertyFromCriteria = givenIndexedPropCriteria;
             return this;
         }
+
+        internal List<CloudTableEntity<TDomainObject>> CloudTableEntities { get; set; } 
     }
 }
