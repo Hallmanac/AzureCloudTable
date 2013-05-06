@@ -482,7 +482,7 @@ namespace AzureCloudTableContext.Api
 
         private int GetRoughSizeOfEntitiesArray(TAzureTableEntity[] entities)
         {
-            var entitesSerializedAsJsv = entities.ToJsv();
+            var entitesSerializedAsJsv = JsonSerializer.SerializeToString(entities);
             return entitesSerializedAsJsv.Length;
         }
 
