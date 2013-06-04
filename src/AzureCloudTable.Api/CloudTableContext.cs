@@ -20,11 +20,10 @@ namespace AzureCloudTableContext.Api
         private CloudTable _table;
         private TableAccessContext<CloudTableEntity<TDomainEntity>> _tableAccessContext;
 
-        private List<PartitionSchema<TDomainEntity>> _partitionSchemas; 
-
         private CloudTableEntity<PartitionMetaData> _partitionMetaDataEntity;
         private TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
         private string _defaultSchemaName;
+        private bool _needToRunTableIndices;
 
         /// <summary>
         /// Initializes a new CloudTableContext object. If the <param name="tableName"></param> parameter is left null, then the default 
@@ -43,8 +42,13 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Gets a list of the PartitionKeys that are used in the table.
         /// </summary>
-        public List<string> PartitionKeysInTable { get; private set; } 
-        
+        public List<string> PartitionKeysInTable { get; private set; }
+
+        /// <summary>
+        /// Runtime list of active partition schemas.
+        /// </summary>
+        public List<PartitionSchema<TDomainEntity>> PartitionSchemas { get; set; }
+
         /// <summary>
         /// This is the name of the property that is used to store the ID of the Domain Entity.
         /// <para>For example, if there is a domain entity of type User that has a property named "Id" then one would pass
@@ -96,8 +100,8 @@ namespace AzureCloudTableContext.Api
             var canWritePartition = false;
             foreach(var partitionSchema in partitionSchemas)
             {
-                if (_partitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) continue;
-                _partitionSchemas.Add(partitionSchema);
+                if (PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) continue;
+                PartitionSchemas.Add(partitionSchema);
                 if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Any(pKey => pKey == partitionSchema.PartitionKey)) continue;
                 _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(partitionSchema.PartitionKey);
                 canWritePartition = true;
@@ -112,8 +116,8 @@ namespace AzureCloudTableContext.Api
         /// <param name="partitionSchema"></param>
         public void AddPartitionSchema(PartitionSchema<TDomainEntity> partitionSchema)
         {
-            if (_partitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) return;
-            _partitionSchemas.Add(partitionSchema);
+            if (PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) return;
+            PartitionSchemas.Add(partitionSchema);
             if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Any(pKey => pKey == partitionSchema.PartitionKey)) return;
             _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(partitionSchema.PartitionKey);
             _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
@@ -292,7 +296,7 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
-            _partitionSchemas = new List<PartitionSchema<TDomainEntity>>();
+            PartitionSchemas = new List<PartitionSchema<TDomainEntity>>();
 
             _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount,
                 tableName);
@@ -339,7 +343,7 @@ namespace AzureCloudTableContext.Api
                 DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
                     .SetSchemaCriteria(entity => true)
                     .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type.
-                if(_partitionSchemas.All(schema => schema.PartitionKey != DefaultSchema.PartitionKey))
+                if(PartitionSchemas.All(schema => schema.PartitionKey != DefaultSchema.PartitionKey))
                 {
                     AddPartitionSchema(DefaultSchema);
                 }
@@ -358,7 +362,7 @@ namespace AzureCloudTableContext.Api
 
         private void ValidateTableEntityAgainstPartitionSchemas(CloudTableEntity<TDomainEntity> tableEntity)
         {
-            foreach(var partitionSchema in _partitionSchemas)
+            foreach(var partitionSchema in PartitionSchemas)
             {
                 if(partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
                 {
@@ -406,6 +410,8 @@ namespace AzureCloudTableContext.Api
 
         private void ExecuteTableOperation(TDomainEntity domainEntity, string batchOperation)
         {
+            VerifyAllPartitionsExist();
+            RunTableIndexing();
             var tempTableEntity = new CloudTableEntity<TDomainEntity>
             {
                 DomainObjectInstance = domainEntity
@@ -414,9 +420,31 @@ namespace AzureCloudTableContext.Api
             WritePartitionSchemasToTable(batchOperation);
         }
 
+        private void VerifyAllPartitionsExist()
+        {
+            // Check local list of Partition Schemas against the list of partition keys in _table Context
+            PartitionSchemas.ForEach(schema =>
+            {
+                if (!(PartitionKeysInTable.Contains(schema.PartitionKey)))
+                {
+                    AddPartitionSchema(schema);
+                    _needToRunTableIndices = true;
+                }
+
+            });
+        }
+
+        private void RunTableIndexing()
+        {
+            if(!_needToRunTableIndices) return;
+            var defaultPartitionEntities = GetByDefaultSchema().ToList();
+            InsertOrReplace(defaultPartitionEntities.ToArray());
+            _needToRunTableIndices = false;
+        }
+
         private void WritePartitionSchemasToTable(string batchOperation)
         {
-            _partitionSchemas.ForEach(schema =>
+            PartitionSchemas.ForEach(schema =>
             {
                 if(schema.CloudTableEntities.Count > 0)
                 {
