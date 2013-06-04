@@ -11,9 +11,9 @@ namespace Sample
 
     public class UserRepository
     {
-        private readonly string _accountKey = "16aT3EI1y0pEGzmskd2ZjVd95Cor8og6VGWrNq5QJNOUoNFVbcC4IeL4LiGRPVnFcqh4C6wzJULzulmpF7acRA==";
+        private readonly string _accountKey = "SomeLongAccountKey";
 
-        private readonly string _accountName = "hallmanac";
+        private readonly string _accountName = "YourAzureStorageAccountName";
 
         /*This is used as a dummy object to give access to the property names of a User type.
          *If the User class was static, then there would be no need for this.
