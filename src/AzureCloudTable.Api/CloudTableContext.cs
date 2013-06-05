@@ -97,17 +97,11 @@ namespace AzureCloudTableContext.Api
         /// <param name="partitionSchemas"></param>
         public void AddMultiplePartitionSchemas(List<PartitionSchema<TDomainEntity>> partitionSchemas)
         {
-            var canWritePartition = false;
             foreach(var partitionSchema in partitionSchemas)
             {
                 if (PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) continue;
                 PartitionSchemas.Add(partitionSchema);
-                if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Any(pKey => pKey == partitionSchema.PartitionKey)) continue;
-                _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(partitionSchema.PartitionKey);
-                canWritePartition = true;
             }
-            if(canWritePartition)
-                _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
         /// <summary>
@@ -118,9 +112,6 @@ namespace AzureCloudTableContext.Api
         {
             if (PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) return;
             PartitionSchemas.Add(partitionSchema);
-            if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Any(pKey => pKey == partitionSchema.PartitionKey)) return;
-            _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(partitionSchema.PartitionKey);
-            _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
         /// <summary>
@@ -422,16 +413,21 @@ namespace AzureCloudTableContext.Api
 
         private void VerifyAllPartitionsExist()
         {
+            var shouldWriteToTable = false;
             // Check local list of Partition Schemas against the list of partition keys in _table Context
             PartitionSchemas.ForEach(schema =>
             {
-                if (!(PartitionKeysInTable.Contains(schema.PartitionKey)))
+                if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
                 {
-                    AddPartitionSchema(schema);
+                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
+                    if(!PartitionKeysInTable.Contains(schema.PartitionKey))
+                        PartitionKeysInTable.Add(schema.PartitionKey);
+                    shouldWriteToTable = true;
                     _needToRunTableIndices = true;
                 }
-
             });
+            if(shouldWriteToTable) 
+                _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
         private void RunTableIndexing()
