@@ -18,13 +18,12 @@ namespace AzureCloudTableContext.Api
         private readonly string _partitionSchemasRowKey = "PartitionSchemas";
         
         private CloudTable _table;
-        private TableReadWriteContext<CloudTableEntity<TDomainEntity>> _tableReadWriteContext;
-
-        private List<PartitionSchema<TDomainEntity>> _partitionSchemas; 
+        private TableAccessContext<CloudTableEntity<TDomainEntity>> _tableAccessContext;
 
         private CloudTableEntity<PartitionMetaData> _partitionMetaDataEntity;
-        private TableReadWriteContext<CloudTableEntity<PartitionMetaData>> _metadataReadWriteContext;
+        private TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
         private string _defaultSchemaName;
+        private bool _needToRunTableIndices;
 
         /// <summary>
         /// Initializes a new CloudTableContext object. If the <param name="tableName"></param> parameter is left null, then the default 
@@ -43,8 +42,13 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Gets a list of the PartitionKeys that are used in the table.
         /// </summary>
-        public List<string> PartitionKeysInTable { get; private set; } 
-        
+        public List<string> PartitionKeysInTable { get; private set; }
+
+        /// <summary>
+        /// Runtime list of active partition schemas.
+        /// </summary>
+        public List<PartitionSchema<TDomainEntity>> PartitionSchemas { get; set; }
+
         /// <summary>
         /// This is the name of the property that is used to store the ID of the Domain Entity.
         /// <para>For example, if there is a domain entity of type User that has a property named "Id" then one would pass
@@ -59,13 +63,33 @@ namespace AzureCloudTableContext.Api
         public PartitionSchema<TDomainEntity> DefaultSchema { get; private set; }
 
         /// <summary>
-        /// Returns a TableReadWriteContext class which allows for more options in constructing custom queries against the table.
+        /// Returns a TableAccessContext class which allows for more options in constructing custom queries against the table.
         /// </summary>
         /// <returns></returns>
         public TableQuery<CloudTableEntity<TDomainEntity>> TableQuery()
         {
-            return _tableReadWriteContext.Query();
+            return _tableAccessContext.Query();
         }
+
+        /// <summary>
+        /// Creates a new PartitionSchema for the <see cref="TDomainEntity"/> based on the given <param name="partitionKey"></param>.
+        /// The PartitionSchema RowKey will be set based on the ID property of the <see cref="TDomainEntity"/>.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <returns></returns>
+        public PartitionSchema<TDomainEntity> CreatePartitionSchema(string partitionKey)
+        {
+            var schema = new PartitionSchema<TDomainEntity>(NameOfEntityIdProperty)
+                .SetPartitionKey(partitionKey);
+            return schema;
+        }
+
+        /// <summary>
+        /// Creates a new PartitionSchema object for the <see cref="TDomainEntity"/> with the PartitionKey being set based on
+        /// the name of the type by default. The PartitionSchema RowKey will be set based on the ID property of the <see cref="TDomainEntity"/>.
+        /// </summary>
+        /// <returns></returns>
+        public PartitionSchema<TDomainEntity> CreatePartitionSchema() { return CreatePartitionSchema(typeof(TDomainEntity).Name); } 
 
         /// <summary>
         /// Adds multiple PartitionSchema types to the current CloudTableContext. 
@@ -73,15 +97,11 @@ namespace AzureCloudTableContext.Api
         /// <param name="partitionSchemas"></param>
         public void AddMultiplePartitionSchemas(List<PartitionSchema<TDomainEntity>> partitionSchemas)
         {
-            var canWritePartition = false;
-            foreach(var schema in partitionSchemas)
+            foreach(var partitionSchema in partitionSchemas)
             {
-                if(PartitionExists(schema.SchemaName)) continue;
-                CreateNewPartitionSchema(schema);
-                canWritePartition = true;
+                if (PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) continue;
+                PartitionSchemas.Add(partitionSchema);
             }
-            if(canWritePartition)
-                _metadataReadWriteContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
         /// <summary>
@@ -90,326 +110,102 @@ namespace AzureCloudTableContext.Api
         /// <param name="partitionSchema"></param>
         public void AddPartitionSchema(PartitionSchema<TDomainEntity> partitionSchema)
         {
-            if (PartitionExists(partitionSchema.SchemaName)) return;
-            CreateNewPartitionSchema(partitionSchema);
-            _metadataReadWriteContext.InsertOrReplace(_partitionMetaDataEntity);
+            if (PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) return;
+            PartitionSchemas.Add(partitionSchema);
+        }
+
+        /// <summary>
+        /// A string for a row key that provides a default ordering of oldest to newest.
+        /// </summary>
+        /// <returns></returns>
+        public string GetChronologicalBasedRowKey()
+        {
+            return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), Guid.NewGuid().ToJsv());
+        }
+
+        /// <summary>
+        /// A Row key that can be used for an ordering of newest to oldest.
+        /// </summary>
+        /// <returns></returns>
+        public string GetReverseChronologicalBasedRowKey()
+        {
+            return string.Format("{0:D20}_{1}", (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.Now.Ticks),
+                                 Guid.NewGuid());
         }
 
         /// <summary>
         /// Executes a single "InsertOrMerge" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void InsertOrMerge(TDomainEntity domainEntity)
-        {
-            var cloudTableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-            ValidateTableEntityAgainstPartitionSchemas(cloudTableEntity);
-            foreach(var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void InsertOrMerge(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "InsertOrMerge"); }
 
         /// <summary>
         /// Executes a batch "InsertOrMerge" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void InsertOrMerge(TDomainEntity[] domainEntities)
-        {
-            foreach (var domainEntity in domainEntities)
-            {
-                var tableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-                ValidateTableEntityAgainstPartitionSchemas(tableEntity);
-            }
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void InsertOrMerge(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "InsertOrMerge"); }
 
         /// <summary>
         /// Executes a single "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void InsertOrReplace(TDomainEntity domainEntity)
-        {
-            var cloudTableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-            ValidateTableEntityAgainstPartitionSchemas(cloudTableEntity);
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void InsertOrReplace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "InsertOrReplace"); }
 
         /// <summary>
         /// Executes batch "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void InsertOrReplace(TDomainEntity[] domainEntities)
-        {
-            foreach (var domainEntity in domainEntities)
-            {
-                var tableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-                ValidateTableEntityAgainstPartitionSchemas(tableEntity);
-            }
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    foreach(var keyValuePair in partitionSchema.CloudTableEntities)
-                    {
-                        var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                        _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                        keyValuePair.Value.Clear();
-                    }
-                    partitionSchema.CloudTableEntities.Clear();
-                }
-            }
-        }
+        public void InsertOrReplace(TDomainEntity[] domainEntities) { 
+            ExecuteTableOperation(domainEntities, "InsertOrReplace"); }
 
         /// <summary>
         /// Executes a single "Insert" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Insert(TDomainEntity domainEntity)
-        {
-            var cloudTableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-            ValidateTableEntityAgainstPartitionSchemas(cloudTableEntity);
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void Insert(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "Insert"); }
 
         /// <summary>
         /// Executes a batch "Insert" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Insert(TDomainEntity[] domainEntities)
-        {
-            foreach (var domainEntity in domainEntities)
-            {
-                var tableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-                ValidateTableEntityAgainstPartitionSchemas(tableEntity);
-            }
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void Insert(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "Insert"); }
 
         /// <summary>
         /// Executes a single "Delete" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Delete(TDomainEntity domainEntity)
-        {
-            var cloudTableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-            ValidateTableEntityAgainstPartitionSchemas(cloudTableEntity);
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void Delete(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "Delete"); }
 
         /// <summary>
         /// Executes a batch "Delete" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Delete(TDomainEntity[] domainEntities)
-        {
-            foreach (var domainEntity in domainEntities)
-            {
-                var tableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-                ValidateTableEntityAgainstPartitionSchemas(tableEntity);
-            }
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void Delete(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "Delete"); }
 
         /// <summary>
         /// Executes a single "Replace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Replace(TDomainEntity domainEntity)
-        {
-            var cloudTableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
-            ValidateTableEntityAgainstPartitionSchemas(cloudTableEntity);
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void Replace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "Replace"); }
 
         /// <summary>
         /// Executes a batch "Replace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Replace(TDomainEntity[] domainEntities)
-        {
-            foreach (var domainEntity in domainEntities)
-            {
-                var tableEntity = new CloudTableEntity<TDomainEntity>
-                    {
-                        DomainObjectInstance = domainEntity
-                    };
-                ValidateTableEntityAgainstPartitionSchemas(tableEntity);
-            }
-            foreach (var partitionSchema in _partitionSchemas)
-            {
-                if(partitionSchema.CloudTableEntities.Count > 0)
-                {
-                    if (partitionSchema.CloudTableEntities.Count > 0)
-                    {
-                        foreach (var keyValuePair in partitionSchema.CloudTableEntities)
-                        {
-                            var entitiesInSchemaList = keyValuePair.Value.ToArray();
-                            _tableReadWriteContext.InsertOrReplace(entitiesInSchemaList);
-                            keyValuePair.Value.Clear();
-                        }
-                        partitionSchema.CloudTableEntities.Clear();
-                    }
-                }
-            }
-        }
+        public void Replace(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "Replace"); }
 
         /// <summary>
         /// Gets all the entities via the DefaultSchema.
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> GetAll()
+        public IEnumerable<TDomainEntity> GetByDefaultSchema()
         {
-            return
-                _tableReadWriteContext.GetByPartitionKey(_defaultSchemaName)
-                    .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
+            return _tableAccessContext.GetByPartitionKey(_defaultSchemaName)
+                .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
         /// <summary>
-        /// Gets a domain entity using the partition partitionKey's SchemaName (for the PartitionKey) and the entity's Id (for the RowKey).
+        /// Gets a domain entity using the partition partitionKey's PartitionKey (for the PartitionKey) and the entity's Id (for the RowKey).
         /// If the <param name="partitionKey"></param> parameter is left null then the DefaultSchema is used.
         /// </summary>
         /// <param name="entityId"></param>
@@ -419,10 +215,10 @@ namespace AzureCloudTableContext.Api
         {
             if(entityId == null)
                 throw new ArgumentNullException("entityId");
-            var entityIdToJsv = entityId.ToJsv();
+            var serializedEntityId = JsonSerializer.SerializeToString(entityId, entityId.GetType()); 
             if(partitionKey == null)
-                partitionKey = DefaultSchema.SchemaName;
-            var tableEntity = _tableReadWriteContext.Find(partitionKey, entityIdToJsv);
+                partitionKey = DefaultSchema.PartitionKey;
+            var tableEntity = _tableAccessContext.Find(partitionKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
@@ -437,13 +233,14 @@ namespace AzureCloudTableContext.Api
             if(partitionKey is string)
             {
                 return
-                    _tableReadWriteContext.GetByPartitionKey(partitionKey as string)
+                    _tableAccessContext.GetByPartitionKey(partitionKey as string)
                         .Select(tableEntity => tableEntity.DomainObjectInstance);
             }
+            var serializedPartitionKey = JsonSerializer.SerializeToString(partitionKey, partitionKey.GetType());
             return
-                _tableReadWriteContext.GetByPartitionKey(partitionKey.ToJsv())
+                _tableAccessContext.GetByPartitionKey(serializedPartitionKey)
                     .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
-        } 
+        }
 
         /// <summary>
         /// Retrieves a set of domain entities based on a given PartitionScheme and an optional RowKey range.
@@ -456,7 +253,7 @@ namespace AzureCloudTableContext.Api
             string maxRowKey = "")
         {
             return
-                _tableReadWriteContext.GetByPartitionKeyWithRowKeyRange(partitionKey, minRowKey, maxRowKey)
+                _tableAccessContext.GetByPartitionKeyWithRowKeyRange(partitionKey, minRowKey, maxRowKey)
                     .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
@@ -467,7 +264,7 @@ namespace AzureCloudTableContext.Api
         /// <param name="partitionKey"></param>
         /// <param name="indexedProperty"></param>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> QueryWhereIndexedPropertyEquals(string partitionKey, object indexedProperty)
+        public IEnumerable<TDomainEntity> GetByIndexedProperty(string partitionKey, object indexedProperty)
         {
             var tempCloudTableEntity = new CloudTableEntity<TDomainEntity>
                 {
@@ -476,11 +273,11 @@ namespace AzureCloudTableContext.Api
                             ValueBeingIndexed = indexedProperty
                         }
                 };
-            var indexedPropertyJsv = tempCloudTableEntity.IndexedProperty.ToJsv();
+            var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty, tempCloudTableEntity.IndexedProperty.GetType());
             var nameOfIndexedProp = tempCloudTableEntity.GetPropertyName(() => tempCloudTableEntity.IndexedProperty);
             
-            return _tableReadWriteContext.QueryWherePropertyEquals(partitionKey,
-                nameOfIndexedProp, indexedPropertyJsv).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
+            return _tableAccessContext.QueryWherePropertyEquals(partitionKey,
+                nameOfIndexedProp, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
         private void Init(CloudStorageAccount storageAccount, string propertyNameOfEntityId, string tableName)
@@ -490,22 +287,32 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
-            _partitionSchemas = new List<PartitionSchema<TDomainEntity>>();
+            PartitionSchemas = new List<PartitionSchema<TDomainEntity>>();
 
-            _metadataReadWriteContext = new TableReadWriteContext<CloudTableEntity<PartitionMetaData>>(storageAccount,
+            _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount,
                 tableName);
             LoadTableMetaData();
-            _tableReadWriteContext = new TableReadWriteContext<CloudTableEntity<TDomainEntity>>(storageAccount,
+            _tableAccessContext = new TableAccessContext<CloudTableEntity<TDomainEntity>>(storageAccount,
                 tableName);
         }
 
         private void LoadTableMetaData()
         {
-            _partitionMetaDataEntity = _metadataReadWriteContext.Find(_tableMetaDataPartitionKey,
+            // Try to load the partition meta data from the existing table (which contains a list of the partition keys in the table).
+            _partitionMetaDataEntity = _tableMetaDataContext.Find(_tableMetaDataPartitionKey,
                 _partitionSchemasRowKey);
-            _defaultSchemaName = "DefaultPartition";
+
+            // Set the default PartitionKey using the combination below in case there are more than one CloudTableContext objects
+            // on the same table.
+            _defaultSchemaName = string.Format("DefaultPartition_ofType_{0}", typeof(TDomainEntity).Name);
+            
+
             if(_partitionMetaDataEntity != null)
             {
+                /* This is going through and populating the local PartitionKeysInTable property with the list of keys retrieved
+                 * from the Azure table.
+                 * This also checks to see if there is a PartitionKey for the table meta data and the DefaultPartition
+                 * and adds that if there isn't*/
                 bool metaDataPkIsInList = false;
                 foreach(var partitionKeyString in _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys)
                 {
@@ -522,102 +329,144 @@ namespace AzureCloudTableContext.Api
                 }
                 if(!metaDataPkIsInList)
                     PartitionKeysInTable.Add(_tableMetaDataPartitionKey);
-                DefaultSchema = new PartitionSchema<TDomainEntity>(schemaName: _defaultSchemaName,
-                    validateEntityForPartition: entity => true, setPartitionKey: entity => _defaultSchemaName);
-                if(!(PartitionExists(DefaultSchema.SchemaName)))
+                
+                // The RowKey for the DefaultSchema is set by the given ID property of the TDomainEntity object
+                DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
+                    .SetSchemaCriteria(entity => true)
+                    .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type.
+                if(PartitionSchemas.All(schema => schema.PartitionKey != DefaultSchema.PartitionKey))
                 {
-                    CreateNewPartitionSchema(DefaultSchema);
+                    AddPartitionSchema(DefaultSchema);
                 }
             }
             else
             {
+                /* Creates a new partition meta data entity and adds the appropriate default partitions and metadata partitions*/
                 _partitionMetaDataEntity = new CloudTableEntity<PartitionMetaData>(_tableMetaDataPartitionKey,
                     _partitionSchemasRowKey);
-                DefaultSchema = new PartitionSchema<TDomainEntity>(schemaName: _defaultSchemaName,
-                    validateEntityForPartition: entity => true, setPartitionKey: entity => _defaultSchemaName);
-                CreateNewPartitionSchema(DefaultSchema);
-                _metadataReadWriteContext.InsertOrReplace(_partitionMetaDataEntity);
+                DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
+                    .SetSchemaCriteria(entity => true)
+                    .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type
+                AddPartitionSchema(DefaultSchema);
             }
-        }
-
-        private bool PartitionExists(string partitionName)
-        {
-            return _partitionSchemas.Any(partitionSchema => partitionSchema.SchemaName == partitionName);
-        }
-
-        private void CreateNewPartitionSchema(PartitionSchema<TDomainEntity> schema)
-        {
-            _partitionSchemas.Add(schema);
-
-            /*if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.All(partitionSchema => partitionSchema != schema.SchemaName))
-                _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.SchemaName);*/
         }
 
         private void ValidateTableEntityAgainstPartitionSchemas(CloudTableEntity<TDomainEntity> tableEntity)
         {
-            foreach(var partitionSchema in _partitionSchemas)
+            foreach(var partitionSchema in PartitionSchemas)
             {
-                if(partitionSchema.ValidateEntityForPartition(tableEntity.DomainObjectInstance))
+                if(partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
                 {
-                    var tempTableEntity =
-                        new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance);
-                    tempTableEntity.PartitionKey = partitionSchema.SetPartitionKey(tempTableEntity.DomainObjectInstance);
-                    if(
-                        _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.All(
-                                                                                               schemaName =>
-                                                                                                   schemaName !=
-                                                                                                       tempTableEntity
-                                                                                                           .PartitionKey))
+                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance);
+                    tempTableEntity.PartitionKey = partitionSchema.PartitionKey;
+                    
+                    // Checks if the current partition key has been registered with the list of partition keys for the table
+                    if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
+                        .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
                     {
                         _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
                         SavePartitionKeys();
                     }
+
+                    tempTableEntity.RowKey = partitionSchema.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
                     
-                    tempTableEntity.RowKey = partitionSchema.SetRowKey(tempTableEntity.DomainObjectInstance);
-                    if(tempTableEntity.RowKey == null)
-                    {
-                        if(string.IsNullOrWhiteSpace(NameOfEntityIdProperty))
-                            tempTableEntity.SetDefaultRowKey();
-                        else
-                        {
-                            var idPropertyValue =
-                                typeof(TDomainEntity).GetProperty(NameOfEntityIdProperty)
-                                    .GetValue(tempTableEntity.DomainObjectInstance);
-                            if(idPropertyValue != null)
-                            {
-                                var idValueToJsv = idPropertyValue.ToJsv();
-                                tempTableEntity.RowKey = idValueToJsv;
-                            }
-                            else
-                            {
-                                tempTableEntity.SetDefaultRowKey();
-                            }
-                        }
-                    }
-                    var indexedPropertyObject = partitionSchema.SetIndexedProperty(tempTableEntity.DomainObjectInstance);
+                    // Need to get the Object that is to be indexed and then wrap it in a reference object for proper JSV serialization.
+                    var indexedPropertyObject = partitionSchema.GetIndexedPropertyFromCriteria(tempTableEntity.DomainObjectInstance);
                     tempTableEntity.IndexedProperty = new IndexedObject
-                        {
-                            ValueBeingIndexed = indexedPropertyObject
-                        };
-                    if((partitionSchema.CloudTableEntities.ContainsKey(tempTableEntity.PartitionKey)))
                     {
-                        partitionSchema.CloudTableEntities[tempTableEntity.PartitionKey].Add(tempTableEntity);
-                    }
-                    else
-                    {
-                        partitionSchema.CloudTableEntities.Add(tempTableEntity.PartitionKey,
-                            new List<CloudTableEntity<TDomainEntity>>(new List<CloudTableEntity<TDomainEntity>>
-                                {
-                                    tempTableEntity
-                                }));
-                    }
+                        ValueBeingIndexed = indexedPropertyObject
+                    };
+                    partitionSchema.CloudTableEntities.Add(tempTableEntity);
                 }
             }
         }
 
         private void SavePartitionKeys()
         {
-            _metadataReadWriteContext.InsertOrReplace(_partitionMetaDataEntity);
+            _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
+        }
+
+        private void ExecuteTableOperation(TDomainEntity[] domainEntities, string batchOperation)
+        {
+            foreach (var domainEntity in domainEntities)
+            {
+                var tempTableEntity = new CloudTableEntity<TDomainEntity>
+                {
+                    DomainObjectInstance = domainEntity
+                };
+                ValidateTableEntityAgainstPartitionSchemas(tempTableEntity);
+            }
+            WritePartitionSchemasToTable(batchOperation);
+        }
+
+        private void ExecuteTableOperation(TDomainEntity domainEntity, string batchOperation)
+        {
+            VerifyAllPartitionsExist();
+            RunTableIndexing();
+            var tempTableEntity = new CloudTableEntity<TDomainEntity>
+            {
+                DomainObjectInstance = domainEntity
+            };
+            ValidateTableEntityAgainstPartitionSchemas(tempTableEntity);
+            WritePartitionSchemasToTable(batchOperation);
+        }
+
+        private void VerifyAllPartitionsExist()
+        {
+            var shouldWriteToTable = false;
+            // Check local list of Partition Schemas against the list of partition keys in _table Context
+            PartitionSchemas.ForEach(schema =>
+            {
+                if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
+                {
+                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
+                    if(!PartitionKeysInTable.Contains(schema.PartitionKey))
+                        PartitionKeysInTable.Add(schema.PartitionKey);
+                    shouldWriteToTable = true;
+                    _needToRunTableIndices = true;
+                }
+            });
+            if(shouldWriteToTable) 
+                _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
+        }
+
+        private void RunTableIndexing()
+        {
+            if(!_needToRunTableIndices) return;
+            var defaultPartitionEntities = GetByDefaultSchema().ToList();
+            InsertOrReplace(defaultPartitionEntities.ToArray());
+            _needToRunTableIndices = false;
+        }
+
+        private void WritePartitionSchemasToTable(string batchOperation)
+        {
+            PartitionSchemas.ForEach(schema =>
+            {
+                if(schema.CloudTableEntities.Count > 0)
+                {
+                    var entitiesArray = schema.CloudTableEntities.ToArray();
+                    switch(batchOperation)
+                    {
+                        case "InsertOrReplace":
+                            _tableAccessContext.InsertOrReplace(entitiesArray);
+                            break;
+                        case "InsertOrMerge":
+                            _tableAccessContext.InsertOrMerge(entitiesArray);
+                            break;
+                        case "Insert":
+                            _tableAccessContext.Insert(entitiesArray);
+                            break;
+                        case "Replace":
+                            _tableAccessContext.Replace(entitiesArray);
+                            break;
+                        case "Delete":
+                            _tableAccessContext.Delete(entitiesArray);
+                            break;
+                    }
+                    _tableAccessContext.InsertOrReplace(entitiesArray);
+                }
+                schema.CloudTableEntities.Clear();
+            });
         }
     }
 }
