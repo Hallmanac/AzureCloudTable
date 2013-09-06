@@ -16,6 +16,7 @@
           - T.Dump() generic extension method for easy dbugging and introspection of types
           - WebRequest, List, Dictionary and DateTime extensions</description>
     <summary>.NET's fastest JSON, JSV and CSV Text Serializers</summary>
+    <releaseNotes />
     <copyright>ServiceStack 2013 and contributors</copyright>
     <language>en-US</language>
     <tags>JSON Text Serializer CSV JSV Dump PrettyPrint Fast</tags>
