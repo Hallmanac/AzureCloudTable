@@ -1,24 +1,25 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
-using ServiceStack.Text;
-
-namespace AzureCloudTableContext.Api
+﻿namespace AzureCloudTableContext.Api
 {
+    using System;
+    using System.Collections.Concurrent;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Text;
     using System.Threading.Tasks;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Table;
+    using ServiceStack.Text;
 
     /// <summary>
-    /// Class that provides direct interaction to the current Azure Table through commonly used techniques. 
-    /// Uses a generic object that implements the ITableEntity interface. This class can be used in 
-    /// conjunction with the CloudTableEntity class to wrap a POCO.
+    ///     Class that provides direct interaction to the current Azure Table through commonly used techniques.
+    ///     Uses a generic object that implements the ITableEntity interface. This class can be used in
+    ///     conjunction with the CloudTableEntity class to wrap a POCO.
     /// </summary>
     /// <typeparam name="TAzureTableEntity"></typeparam>
     public class TableAccessContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {
-        private readonly CloudTable _table;
         private readonly CloudStorageAccount _storageAccount;
+        private readonly CloudTable _table;
 
         public TableAccessContext(CloudStorageAccount storageAccount)
         {
@@ -28,7 +29,7 @@ namespace AzureCloudTableContext.Api
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
         }
-        
+
         public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TAzureTableEntity).Name) : tableName;
@@ -39,17 +40,17 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Gets the current Azure Table being accessed.
+        ///     Gets the current Azure Table being accessed.
         /// </summary>
         public CloudTable Table { get { return _table; } }
 
         /// <summary>
-        /// Executes a single table operation of the same name.
+        ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void InsertOrMerge(TAzureTableEntity tableEntity)
         {
-            TableOperation updateOperation = TableOperation.InsertOrMerge(tableEntity);
+            var updateOperation = TableOperation.InsertOrMerge(tableEntity);
             _table.Execute(updateOperation);
         }
 
@@ -60,23 +61,25 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a batch table operation of the same name on an array of <param name="entities"></param>. Insures that
-        /// that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        /// no more than 100 in a batch).
+        ///     Executes a batch table operation of the same name on an array of
+        ///     <param name="entities"></param>
+        ///     . Insures that
+        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        ///     no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void InsertOrMerge(TAzureTableEntity[] entities)
         {
-            ExecuteBatchOperation(entities, "InsertOrMerge");
+            ExecuteBatchOperation(entities, OperationNames.InsertOrMerge);
         }
 
         public async Task InsertOrMergeAsync(TAzureTableEntity[] entities)
         {
-            await ExecuteBatchOperationAsync(entities, "InsertOrMerge");
+            await ExecuteBatchOperationAsync(entities, OperationNames.InsertOrMerge).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Executes a single table operation of the same name.
+        ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void InsertOrReplace(TAzureTableEntity tableEntity)
@@ -86,9 +89,11 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a batch table operation of the same name on an array of <param name="entities"></param>. Insures that
-        /// that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        /// no more than 100 in a batch).
+        ///     Executes a batch table operation of the same name on an array of
+        ///     <param name="entities"></param>
+        ///     . Insures that
+        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        ///     no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void InsertOrReplace(TAzureTableEntity[] entities)
@@ -97,7 +102,7 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a single table operation of the same name.
+        ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Insert(TAzureTableEntity tableEntity)
@@ -107,9 +112,11 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a batch table operation of the same name on an array of <param name="entities"></param>. Insures that
-        /// that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        /// no more than 100 in a batch).
+        ///     Executes a batch table operation of the same name on an array of
+        ///     <param name="entities"></param>
+        ///     . Insures that
+        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        ///     no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void Insert(TAzureTableEntity[] entities)
@@ -118,7 +125,7 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a single table operation of the same name.
+        ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Delete(TAzureTableEntity tableEntity)
@@ -128,9 +135,11 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a batch table operation of the same name on an array of <param name="entities"></param>. Insures that
-        /// that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        /// no more than 100 in a batch).
+        ///     Executes a batch table operation of the same name on an array of
+        ///     <param name="entities"></param>
+        ///     . Insures that
+        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        ///     no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void Delete(TAzureTableEntity[] entities)
@@ -139,7 +148,7 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a single table operation of the same name.
+        ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Replace(TAzureTableEntity tableEntity)
@@ -149,9 +158,11 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Executes a batch table operation of the same name on an array of <param name="entities"></param>. Insures that
-        /// that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        /// no more than 100 in a batch).
+        ///     Executes a batch table operation of the same name on an array of
+        ///     <param name="entities"></param>
+        ///     . Insures that
+        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        ///     no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void Replace(TAzureTableEntity[] entities)
@@ -159,9 +170,65 @@ namespace AzureCloudTableContext.Api
             ExecuteBatchOperation(entities, "Replace");
         }
 
+        private void ExecuteBatchOperation(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
+        {
+            if(entities == null)
+            {
+                throw new ArgumentNullException("entities");
+            }
+            if(string.IsNullOrEmpty(batchMethodName))
+            {
+                throw new ArgumentNullException("batchMethodName");
+            }
+            var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
+            foreach(var entity in entities)
+            {
+                var entity1 = entity;
+                batchPartitionPairs.AddOrUpdate(entity.PartitionKey, new List<TAzureTableEntity> { entity }, (s, list) =>
+                {
+                    list.Add(entity1);
+                    return list;
+                });
+            }
+            foreach(var pair in batchPartitionPairs)
+            {
+                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
+                entityBatch.BatchList.ForEach(batchOp => _table.ExecuteBatch(batchOp));
+            }
+            
+        }
+
+        private async Task ExecuteBatchOperationAsync(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
+        {
+            if (entities == null)
+            {
+                throw new ArgumentNullException("entities");
+            }
+            if (string.IsNullOrEmpty(batchMethodName))
+            {
+                throw new ArgumentNullException("batchMethodName");
+            }
+            var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
+            foreach (var entity in entities)
+            {
+                var entity1 = entity;
+                batchPartitionPairs.AddOrUpdate(entity.PartitionKey, new List<TAzureTableEntity> {entity}, (s, list) =>
+                {
+                    list.Add(entity1);
+                    return list;
+                });
+            }
+            foreach (var pair in batchPartitionPairs)
+            {
+                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
+                var batchTasks = entityBatch.BatchList.Select(batchOp => _table.ExecuteBatchAsync(batchOp));
+                await Task.WhenAll(batchTasks);
+            }
+        }
+
         #region Queries
         /// <summary>
-        /// Gives access to a raw TableQuery object to create custom queries against the Azure Table.
+        ///     Gives access to a raw TableQuery object to create custom queries against the Azure Table.
         /// </summary>
         /// <returns>TableQuery object</returns>
         public TableQuery<TAzureTableEntity> Query()
@@ -170,7 +237,7 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Gets all table entities that are in a given partition.
+        ///     Gets all table entities that are in a given partition.
         /// </summary>
         /// <param name="partitionKey"></param>
         /// <returns></returns>
@@ -179,13 +246,13 @@ namespace AzureCloudTableContext.Api
             string pkFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
             TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(pkFilter);
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
                 {
                     yield return entity;
                 }
@@ -193,7 +260,7 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Returns a single table entity based on a given PartitionKey & RowKey combination.
+        ///     Returns a single table entity based on a given PartitionKey & RowKey combination.
         /// </summary>
         /// <param name="partitionKey"></param>
         /// <param name="rowKey"></param>
@@ -207,18 +274,18 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Gets a series of table entities based on a single PartitionKey combined with a range of RowKey values.
+        ///     Gets a series of table entities based on a single PartitionKey combined with a range of RowKey values.
         /// </summary>
         /// <param name="pK"></param>
         /// <param name="minRowKey"></param>
         /// <param name="maxRowKey"></param>
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",
-                                                                     string maxRowKey = "")
+                                                                               string maxRowKey = "")
         {
             string pKFilter = GeneratePartitionKeyFilterCondition(pK);
             string rKMinimum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
-                                                                  minRowKey);
+                minRowKey);
             string rKMaximum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, maxRowKey);
             string combinedFilter;
             if(string.IsNullOrWhiteSpace(minRowKey))
@@ -232,72 +299,16 @@ namespace AzureCloudTableContext.Api
             else
             {
                 combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
-                                               TableOperators.And, rKMinimum);
+                    TableOperators.And, rKMinimum);
             }
             TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        #region QueryWherePropertyEquals method with overloads
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, string property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = _table.ExecuteQuerySegmented(query,
                     currentQuerySegment != null
                         ? currentQuerySegment.ContinuationToken
                         : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, byte[] property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
                 foreach(var entity in currentQuerySegment)
                 {
                     yield return entity;
@@ -306,176 +317,7 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, bool property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
-                                                                           property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, DateTimeOffset property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
-                                                                           property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, double property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
-                                                                           property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, Guid property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
-                                                                           property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, int property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
-                                                                           property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-
-        /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with 
-        /// the same property name. Handles the continuation token scenario as well. Overloaded to accept
-        /// all appropriate table entity types.
-        /// </summary>
-        /// <param name="partitionKey"></param>
-        /// <param name="propertyName"></param>
-        /// <param name="property"></param>
-        /// <returns></returns>
-        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, long property)
-        {
-            var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal,
-                                                                           property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                                                                   currentQuerySegment != null
-                                                                           ? currentQuerySegment.ContinuationToken
-                                                                           : null);
-                foreach (TAzureTableEntity entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
-        }
-        #endregion
-
-        /// <summary>
-        /// Shortcut method that returns a TableQuery.GenerateFilterCondition based on an equivalent to the given PartitionKey.
+        ///     Shortcut method that returns a TableQuery.GenerateFilterCondition based on an equivalent to the given PartitionKey.
         /// </summary>
         /// <param name="partitionKey"></param>
         /// <returns></returns>
@@ -491,117 +333,344 @@ namespace AzureCloudTableContext.Api
             TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             return query;
         }
+
+        #region QueryWherePropertyEquals method with overloads
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, string property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, byte[] property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, bool property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
+                property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, DateTimeOffset property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
+                property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, double property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
+                property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, Guid property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
+                property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, int property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
+                property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
+
+        /// <summary>
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, long property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal,
+                property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = _table.ExecuteQuerySegmented(query,
+                    currentQuerySegment != null
+                        ? currentQuerySegment.ContinuationToken
+                        : null);
+                foreach(var entity in currentQuerySegment)
+                {
+                    yield return entity;
+                }
+            }
+        }
         #endregion
 
-        private int GetRoughSizeOfEntitiesArray(TAzureTableEntity[] entities)
-        {
-            var entitesSerializedAsJsv = JsonSerializer.SerializeToString(entities);
-            return entitesSerializedAsJsv.Length;
-        }
+        #endregion
 
-        private bool EntitiesAreOfTheSamePartition(TAzureTableEntity[] entities)
+        internal class EntityBatch
         {
-            if(entities == null || entities.Length < 1)
-                return false;
-            var partitionName = entities[0].PartitionKey;
-            return entities.All(azureTableEntity => azureTableEntity.PartitionKey == partitionName);
-        }
+            private readonly string _operationName;
 
-        private void ExecuteBatchOperation(TAzureTableEntity[] entities, string batchMethodName)
-        {
-            if (!EntitiesAreOfTheSamePartition(entities))
-                throw new Exception("Different Partition Keys detected. Entity Group Transactions (batching) have to be of the same PartitionKey");
-            int sizeOfEntitiesArray = GetRoughSizeOfEntitiesArray(entities);
-            TableBatchOperation theBatchOperation;
-            if (sizeOfEntitiesArray <= 4000000)
+            public EntityBatch(IEnumerable<TAzureTableEntity> entities, string operationName)
             {
-                theBatchOperation = new TableBatchOperation();
-                if (entities.Length <= 100)
+                _operationName = operationName;
+                EntitiesToBatch = new List<EntityBatchPair>();
+                foreach (var azureTableEntity in entities)
                 {
-                    foreach (TAzureTableEntity entity in entities)
-                    {
-                        AddOperationToBatch(ref theBatchOperation, entity, batchMethodName);
-                    }
-                    _table.ExecuteBatch(theBatchOperation);
+                    EntitiesToBatch.Add(new EntityBatchPair(azureTableEntity));
                 }
-                else if (entities.Length > 100)
+                BatchList = new List<TableBatchOperation>();
+                BatchArrayByteSize = BatchBytesSize();
+                GroupEntitiesIntoBatches();
+            }
+
+            public List<EntityBatchPair> EntitiesToBatch { get; private set; }
+
+            public Int64 BatchArrayByteSize { get; private set; }
+
+            public List<TableBatchOperation> BatchList { get; set; }
+
+            public void GroupEntitiesIntoBatches()
+            {
+                BatchList.Clear();
+                EntitiesToBatch.ForEach(ent => ent.IsInBatch = false);
+                const int maxBatchCount = 100;
+                const int maxBatchSize = 4194304;
+                var qtyRemaining = EntitiesToBatch.Count;
+                while (qtyRemaining > 0)
                 {
-                    var processIncrement = 0;
-                    while (processIncrement <= entities.Length)
+                    var batch = new TableBatchOperation();
+                    var currentBatchQty = 0;
+                    var currentBatchSize = 0;
+                    foreach (var entityBatchPair in EntitiesToBatch.Where(etb => !etb.IsInBatch).Select(e => e))
                     {
-                        var batchOf100 = new TAzureTableEntity[100];
-                        theBatchOperation = new TableBatchOperation();
-                        for (int i = 0; i < 100; i++)
+                        var newSize = currentBatchSize + entityBatchPair.EntityByteSize;
+                        if (newSize <= maxBatchSize && currentBatchQty < maxBatchCount)
                         {
-                            batchOf100[i] = entities[processIncrement];
-                            processIncrement++;
+                            AddOperationToBatch(ref batch, entityBatchPair.TableEntity, _operationName);
+                            currentBatchQty++;
+                            currentBatchSize += entityBatchPair.EntityByteSize;
+                            qtyRemaining--;
+                            entityBatchPair.IsInBatch = true;
                         }
-                        foreach (TAzureTableEntity entity in batchOf100)
-                        {
-                            AddOperationToBatch(ref theBatchOperation, entity, batchMethodName);
-                        }
-                        _table.ExecuteBatch(theBatchOperation);
                     }
+                    BatchList.Add(batch);
                 }
             }
-            //There might be a more efficient way to do this (below). For example, there might be 1500 entities that equal 3MB of space
-            //and two entities that are 1MB each (which push the batch over the 4MB limit of Entity Group Transaction's), so it would be 
-            //more efficient in that case to not break things into batches of four. The algorithm below just guarantees that things will 
-            //work since a single entity cannot exceed 1MB in size.
-            else if (sizeOfEntitiesArray > 4000000)
+
+            private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
             {
-                var incrementer = 0;
-                theBatchOperation = new TableBatchOperation();
-                while (incrementer <= entities.Length)
+                switch (batchMethodName)
                 {
-                    var batchOf4 = new TAzureTableEntity[4];
-                    for (int i = 0; i < 4; i++)
-                    {
-                        batchOf4[i] = entities[incrementer];
-                        incrementer++;
-                    }
-                    foreach (var entity in batchOf4)
-                    {
-                        AddOperationToBatch(ref theBatchOperation, entity, batchMethodName);
-                    }
-                    _table.ExecuteBatch(theBatchOperation);
+                    case OperationNames.Insert:
+                        tableBatchOperation.Insert(entity);
+                        break;
+                    case OperationNames.InsertOrMerge:
+                        tableBatchOperation.InsertOrMerge(entity);
+                        break;
+                    case OperationNames.InsertOrReplace:
+                        tableBatchOperation.InsertOrReplace(entity);
+                        break;
+                    case OperationNames.Merge:
+                        tableBatchOperation.Merge(entity);
+                        break;
+                    case OperationNames.Delete:
+                        tableBatchOperation.Delete(entity);
+                        break;
+                    case OperationNames.Replace:
+                        tableBatchOperation.Replace(entity);
+                        break;
                 }
+            }
+
+            private long BatchBytesSize()
+            {
+                long entityBytes = 0;
+                EntitiesToBatch.ForEach(ent => entityBytes += ent.EntityByteSize);
+                return entityBytes;
             }
         }
 
-        private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
+        internal class EntityBatchPair
         {
-            switch (batchMethodName)
+            public EntityBatchPair(TAzureTableEntity entity)
             {
-                case "Insert":
-                    tableBatchOperation.Insert(entity);
-                    break;
-                case "InsertOrMerge":
-                    tableBatchOperation.InsertOrMerge(entity);
-                    break;
-                case "InsertOrReplace":
-                    tableBatchOperation.InsertOrReplace(entity);
-                    break;
-                case "Merge":
-                    tableBatchOperation.Merge(entity);
-                    break;
-                case "Delete":
-                    tableBatchOperation.Delete(entity);
-                    break;
-                case OperationNames.Replace:
-                    tableBatchOperation.Replace(entity);
-                    break;
+                TableEntity = entity;
+                SerializedEntity = JsonSerializer.SerializeToString(entity);
+                EntityByteSize = Encoding.UTF8.GetByteCount(SerializedEntity);
+                IsInBatch = false;
             }
+
+            public TAzureTableEntity TableEntity { get; private set; }
+            public string SerializedEntity { get; private set; }
+
+            public int EntityByteSize { get; private set; }
+            public bool IsInBatch { get; set; }
         }
     }
+
+
 
     internal class OperationNames
     {
         internal const string Insert = "Insert";
-        internal const string InsertOrMerge  = "InsertOrMerge";
+        internal const string InsertOrMerge = "InsertOrMerge";
         internal const string InsertOrReplace = "InsertOrReplace";
-        internal const string Merge  = "Merge";
+        internal const string Merge = "Merge";
         internal const string Delete = "Delete";
-        internal const string Replace  = "Replace";
+        internal const string Replace = "Replace";
     }
 }
