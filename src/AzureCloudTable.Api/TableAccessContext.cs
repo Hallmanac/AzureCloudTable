@@ -7,6 +7,8 @@ using ServiceStack.Text;
 
 namespace AzureCloudTableContext.Api
 {
+    using System.Threading.Tasks;
+
     /// <summary>
     /// Class that provides direct interaction to the current Azure Table through commonly used techniques. 
     /// Uses a generic object that implements the ITableEntity interface. This class can be used in 
@@ -51,6 +53,12 @@ namespace AzureCloudTableContext.Api
             _table.Execute(updateOperation);
         }
 
+        public async Task InsertOrMergeAsync(TAzureTableEntity tableEntity)
+        {
+            var updateOperation = TableOperation.InsertOrMerge(tableEntity);
+            await _table.ExecuteAsync(updateOperation);
+        }
+
         /// <summary>
         /// Executes a batch table operation of the same name on an array of <param name="entities"></param>. Insures that
         /// that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
@@ -60,6 +68,11 @@ namespace AzureCloudTableContext.Api
         public void InsertOrMerge(TAzureTableEntity[] entities)
         {
             ExecuteBatchOperation(entities, "InsertOrMerge");
+        }
+
+        public async Task InsertOrMergeAsync(TAzureTableEntity[] entities)
+        {
+            await ExecuteBatchOperationAsync(entities, "InsertOrMerge");
         }
 
         /// <summary>
@@ -575,10 +588,20 @@ namespace AzureCloudTableContext.Api
                 case "Delete":
                     tableBatchOperation.Delete(entity);
                     break;
-                case "Replace":
+                case OperationNames.Replace:
                     tableBatchOperation.Replace(entity);
                     break;
             }
         }
+    }
+
+    internal class OperationNames
+    {
+        internal const string Insert = "Insert";
+        internal const string InsertOrMerge  = "InsertOrMerge";
+        internal const string InsertOrReplace = "InsertOrReplace";
+        internal const string Merge  = "Merge";
+        internal const string Delete = "Delete";
+        internal const string Replace  = "Replace";
     }
 }
