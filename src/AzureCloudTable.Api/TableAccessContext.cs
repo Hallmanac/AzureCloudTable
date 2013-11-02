@@ -44,6 +44,7 @@
         /// </summary>
         public CloudTable Table { get { return _table; } }
 
+        #region Writes
         /// <summary>
         ///     Executes a single table operation of the same name.
         /// </summary>
@@ -89,6 +90,17 @@
         }
 
         /// <summary>
+        /// Executes a single InsertOrReplace table opertion asynchronously.
+        /// </summary>
+        /// <param name="tableEntity"></param>
+        /// <returns></returns>
+        public async Task InsertOrReplaceAsync(TAzureTableEntity tableEntity)
+        {
+            var updateOperation = TableOperation.InsertOrReplace(tableEntity);
+            await _table.ExecuteAsync(updateOperation);
+        }
+
+        /// <summary>
         ///     Executes a batch table operation of the same name on an array of
         ///     <param name="entities"></param>
         ///     . Insures that
@@ -102,6 +114,17 @@
         }
 
         /// <summary>
+        /// Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table requirements
+        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <returns></returns>
+        public async Task InsertOrReplaceAsync(TAzureTableEntity[] entities)
+        {
+            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpInsertOrReplace).ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
@@ -109,6 +132,17 @@
         {
             var insertTableEntity = TableOperation.Insert(tableEntity);
             _table.Execute(insertTableEntity);
+        }
+
+        /// <summary>
+        /// Executes a single Insert asynchronously.
+        /// </summary>
+        /// <param name="tableEntity"></param>
+        /// <returns></returns>
+        public async Task InsertAsync(TAzureTableEntity tableEntity)
+        {
+            var insertTableEntity = TableOperation.Insert(tableEntity);
+            await _table.ExecuteAsync(insertTableEntity);
         }
 
         /// <summary>
@@ -125,6 +159,17 @@
         }
 
         /// <summary>
+        /// Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table requirements
+        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <returns></returns>
+        public async Task InsertAsync(TAzureTableEntity[] entities)
+        {
+            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpInsert).ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
@@ -132,6 +177,17 @@
         {
             var deleteOperation = TableOperation.Delete(tableEntity);
             _table.Execute(deleteOperation);
+        }
+
+        /// <summary>
+        /// Executes a single Delete table operation asynchronously.
+        /// </summary>
+        /// <param name="tableEntity"></param>
+        /// <returns></returns>
+        public async Task DeleteAsync(TAzureTableEntity tableEntity)
+        {
+            var deleteOperation = TableOperation.Delete(tableEntity);
+            await _table.ExecuteAsync(deleteOperation);
         }
 
         /// <summary>
@@ -148,6 +204,17 @@
         }
 
         /// <summary>
+        /// Executes a batch Delete asynchronously and groups the given entities into groups that meet the Azure Table requirements
+        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <returns></returns>
+        public async Task DeleteAsync(TAzureTableEntity[] entities)
+        {
+            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpDelete).ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Executes a single table operation of the same name.
         /// </summary>
         /// <param name="tableEntity">Single entity used in table operation.</param>
@@ -155,6 +222,17 @@
         {
             var replaceOperation = TableOperation.Delete(tableEntity);
             _table.Execute(replaceOperation);
+        }
+
+        /// <summary>
+        /// Executes a single Replace table operation asynchronously.
+        /// </summary>
+        /// <param name="tableEntity"></param>
+        /// <returns></returns>
+        public async Task ReplaceAsync(TAzureTableEntity tableEntity)
+        {
+            var replaceOperation = TableOperation.Delete(tableEntity);
+            await _table.ExecuteAsync(replaceOperation);
         }
 
         /// <summary>
@@ -170,6 +248,17 @@
             ExecuteBatchOperation(entities, CtConstants.TableOpReplace);
         }
 
+        /// <summary>
+        /// Executes a batch Replace asynchronously and groups the given entities into groups that meet the Azure Table requirements
+        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <returns></returns>
+        public async Task ReplaceAsync(TAzureTableEntity[] entities)
+        {
+            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpReplace).ConfigureAwait(false);
+        }
+
         private void ExecuteBatchOperation(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
         {
             if(entities == null)
@@ -180,6 +269,7 @@
             {
                 throw new ArgumentNullException("batchMethodName");
             }
+            // Creating a dictionary to group partitions together since a batch can only represent one partition.
             var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
             foreach(var entity in entities)
             {
@@ -190,6 +280,8 @@
                     return list;
                 });
             }
+
+            // Iterating through the batch key-value pairs and executing the batch
             foreach(var pair in batchPartitionPairs)
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
@@ -207,6 +299,8 @@
             {
                 throw new ArgumentNullException("batchMethodName");
             }
+
+            // Creating a dictionary to group partitions together since a batch can only represent one partition.
             var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
             foreach(var entity in entities)
             {
@@ -217,6 +311,7 @@
                     return list;
                 });
             }
+            // Iterating through the batch key-value pairs and executing the batch
             foreach(var pair in batchPartitionPairs)
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
@@ -224,6 +319,7 @@
                 await Task.WhenAll(batchTasks);
             }
         }
+        #endregion Writes
 
         #region Queries
         /// <summary>
