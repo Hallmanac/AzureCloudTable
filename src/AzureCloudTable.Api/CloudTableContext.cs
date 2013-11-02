@@ -15,9 +15,6 @@ namespace AzureCloudTableContext.Api
     /// <typeparam name="TDomainEntity"></typeparam>
     public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
     {
-        private readonly string _tableMetaDataPartitionKey = "TableMetaData";
-        private readonly string _partitionSchemasRowKey = "PartitionSchemas";
-        
         private CloudTable _table;
         private TableAccessContext<CloudTableEntity<TDomainEntity>> _tableAccessContext;
 
@@ -138,62 +135,62 @@ namespace AzureCloudTableContext.Api
         /// Executes a single "InsertOrMerge" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void InsertOrMerge(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "InsertOrMerge"); }
+        public void InsertOrMerge(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpInsertOrMerge); }
 
         /// <summary>
         /// Executes a batch "InsertOrMerge" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void InsertOrMerge(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "InsertOrMerge"); }
+        public void InsertOrMerge(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpInsertOrMerge); }
 
         /// <summary>
         /// Executes a single "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void InsertOrReplace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "InsertOrReplace"); }
+        public void InsertOrReplace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpInsertOrReplace); }
 
         /// <summary>
         /// Executes batch "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
         public void InsertOrReplace(TDomainEntity[] domainEntities) { 
-            ExecuteTableOperation(domainEntities, "InsertOrReplace"); }
+            ExecuteTableOperation(domainEntities, CtConstants.TableOpInsertOrReplace); }
 
         /// <summary>
         /// Executes a single "Insert" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Insert(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "Insert"); }
+        public void Insert(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpInsert); }
 
         /// <summary>
         /// Executes a batch "Insert" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Insert(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "Insert"); }
+        public void Insert(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpInsert); }
 
         /// <summary>
         /// Executes a single "Delete" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Delete(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "Delete"); }
+        public void Delete(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpDelete); }
 
         /// <summary>
         /// Executes a batch "Delete" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Delete(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "Delete"); }
+        public void Delete(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpDelete); }
 
         /// <summary>
         /// Executes a single "Replace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Replace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, "Replace"); }
+        public void Replace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpReplace); }
 
         /// <summary>
         /// Executes a batch "Replace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Replace(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, "Replace"); }
+        public void Replace(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpReplace); }
 
         /// <summary>
         /// Gets all the entities via the DefaultSchema.
@@ -275,7 +272,7 @@ namespace AzureCloudTableContext.Api
                         }
                 };
             var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty, tempCloudTableEntity.IndexedProperty.GetType());
-            var nameOfIndexedProp = tempCloudTableEntity.GetPropertyName(() => tempCloudTableEntity.IndexedProperty);
+            const string nameOfIndexedProp = CtConstants.PropNameIndexedProperty;
             
             return _tableAccessContext.QueryWherePropertyEquals(partitionKey,
                 nameOfIndexedProp, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
@@ -300,8 +297,8 @@ namespace AzureCloudTableContext.Api
         private void LoadTableMetaData()
         {
             // Try to load the partition meta data from the existing table (which contains a list of the partition keys in the table).
-            _partitionMetaDataEntity = _tableMetaDataContext.Find(_tableMetaDataPartitionKey,
-                _partitionSchemasRowKey);
+            _partitionMetaDataEntity = _tableMetaDataContext.Find(CtConstants.TableMetaDataPartitionKey,
+                CtConstants.PartitionSchemasRowKey);
 
             // Set the default PartitionKey using the combination below in case there are more than one CloudTableContext objects
             // on the same table.
@@ -317,7 +314,7 @@ namespace AzureCloudTableContext.Api
                 bool metaDataPkIsInList = false;
                 foreach(var partitionKeyString in _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys)
                 {
-                    if(partitionKeyString == _tableMetaDataPartitionKey)
+                    if (partitionKeyString == CtConstants.TableMetaDataPartitionKey)
                         metaDataPkIsInList = true;
                     bool isInList = false;
                     foreach(var item in PartitionKeysInTable)
@@ -329,7 +326,7 @@ namespace AzureCloudTableContext.Api
                         PartitionKeysInTable.Add(partitionKeyString);
                 }
                 if(!metaDataPkIsInList)
-                    PartitionKeysInTable.Add(_tableMetaDataPartitionKey);
+                    PartitionKeysInTable.Add(CtConstants.TableMetaDataPartitionKey);
                 
                 // The RowKey for the DefaultSchema is set by the given ID property of the TDomainEntity object
                 DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
@@ -343,8 +340,8 @@ namespace AzureCloudTableContext.Api
             else
             {
                 /* Creates a new partition meta data entity and adds the appropriate default partitions and metadata partitions*/
-                _partitionMetaDataEntity = new CloudTableEntity<PartitionMetaData>(_tableMetaDataPartitionKey,
-                    _partitionSchemasRowKey);
+                _partitionMetaDataEntity = new CloudTableEntity<PartitionMetaData>(CtConstants.TableMetaDataPartitionKey,
+                    CtConstants.PartitionSchemasRowKey);
                 DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
                     .SetSchemaCriteria(entity => true)
                     .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type
@@ -387,7 +384,7 @@ namespace AzureCloudTableContext.Api
             _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
-        private void ExecuteTableOperation(TDomainEntity[] domainEntities, string batchOperation)
+        private void ExecuteTableOperation(IEnumerable<TDomainEntity> domainEntities, string batchOperation)
         {
             foreach (var domainEntity in domainEntities)
             {
@@ -448,19 +445,19 @@ namespace AzureCloudTableContext.Api
                     var entitiesArray = schema.CloudTableEntities.ToArray();
                     switch(batchOperation)
                     {
-                        case "InsertOrReplace":
+                        case CtConstants.TableOpInsertOrReplace:
                             _tableAccessContext.InsertOrReplace(entitiesArray);
                             break;
-                        case "InsertOrMerge":
+                        case CtConstants.TableOpInsertOrMerge:
                             _tableAccessContext.InsertOrMerge(entitiesArray);
                             break;
-                        case "Insert":
+                        case CtConstants.TableOpInsert:
                             _tableAccessContext.Insert(entitiesArray);
                             break;
-                        case "Replace":
+                        case CtConstants.TableOpReplace:
                             _tableAccessContext.Replace(entitiesArray);
                             break;
-                        case "Delete":
+                        case CtConstants.TableOpDelete:
                             _tableAccessContext.Delete(entitiesArray);
                             break;
                     }

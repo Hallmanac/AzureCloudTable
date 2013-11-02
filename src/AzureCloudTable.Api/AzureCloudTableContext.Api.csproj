@@ -60,6 +60,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CloudTableEntity.cs" />
+    <Compile Include="CtConstants.cs" />
     <Compile Include="IndexedObject.cs" />
     <Compile Include="PartitionSchema.cs" />
     <Compile Include="TableAccessContext.cs" />
