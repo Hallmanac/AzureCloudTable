@@ -58,12 +58,12 @@
         {
             EntityProperty indexedEntityProperty;
             EntityProperty domainObjType;
-            if(properties.TryGetValue("IndexedProperty", out indexedEntityProperty))
+            if(properties.TryGetValue(CtConstants.PropNameIndexedProperty, out indexedEntityProperty))
             {
                 var serializer = new JsonSerializer<IndexedObject>();
                 IndexedProperty = serializer.DeserializeFromString(indexedEntityProperty.StringValue);
             }
-            if(properties.TryGetValue("DomainObjectType", out domainObjType))
+            if(properties.TryGetValue(CtConstants.PropNameDomainObjectType, out domainObjType))
             {
                 DomainObjectType = domainObjType.StringValue;
             }
@@ -75,16 +75,16 @@
             var entityDictionary = WriteFatEntity(DomainObjectInstance);
             if(IndexedProperty == null) IndexedProperty = new IndexedObject();
             DomainObjectType = GetAssemblyQualifiedName();
-            entityDictionary.Add("DomainObjectType", new EntityProperty(DomainObjectType));
+            entityDictionary.Add(CtConstants.PropNameDomainObjectType, new EntityProperty(DomainObjectType));
             var complexTypeSerialized = JsonSerializer.SerializeToString(IndexedProperty, IndexedProperty.GetType());
             if((complexTypeSerialized.Length > 63997))
             {
                 var truncatedType = complexTypeSerialized.Substring(0, 63999);
-                entityDictionary.Add("IndexedProperty", new EntityProperty(truncatedType));
+                entityDictionary.Add(CtConstants.PropNameIndexedProperty, new EntityProperty(truncatedType));
             }
             else
             {
-                entityDictionary.Add("IndexedProperty",
+                entityDictionary.Add(CtConstants.PropNameIndexedProperty,
                     new EntityProperty(complexTypeSerialized));
             }
             return entityDictionary;
@@ -129,11 +129,10 @@
 
         private void ReadFatEntity(IEnumerable<KeyValuePair<string, EntityProperty>> entityProperties)
         {
-            var serializer = new JsonSerializer<TDomainObject>();
             var combinedFatEntity = new StringBuilder();
             foreach(var entityProperty in entityProperties)
             {
-                if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == "IndexedProperty" || entityProperty.Key == "DomainObjectType" ||
+                if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == CtConstants.PropNameIndexedProperty || entityProperty.Key == CtConstants.PropNameDomainObjectType ||
                    entityProperty.Value.PropertyType != EdmType.String) continue;
                 combinedFatEntity.Append(entityProperty.Value.StringValue);
             }
@@ -176,8 +175,8 @@
 
         private bool IsNativeTableProperty(string propertyName)
         {
-            return (propertyName == "PartitionKey" || propertyName == "RowKey" ||
-                    (propertyName == "Timestamp" || propertyName == "ETag"));
+            return (propertyName == CtConstants.PropNamePartitionKey || propertyName == CtConstants.PropNameRowKey ||
+                    (propertyName == CtConstants.PropNameTimeStamp || propertyName == CtConstants.PropNameEtag));
         }
     }
 
@@ -196,4 +195,6 @@
         /// </summary>
         public object GivenObject { get; private set; }
     }
+
+    
 }
