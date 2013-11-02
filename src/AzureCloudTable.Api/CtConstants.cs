@@ -15,5 +15,6 @@
         internal const string TableOpInsertOrMerge = "InsertOrMerge";
         internal const string TableMetaDataPartitionKey = "TableMetaData";
         internal const string PartitionSchemasRowKey = "PartitionSchemas";
+        internal const string TableOpMerge = "Merge";
     }
 }

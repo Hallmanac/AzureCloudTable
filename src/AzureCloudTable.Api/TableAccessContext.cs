@@ -70,12 +70,12 @@
         /// <param name="entities"></param>
         public void InsertOrMerge(TAzureTableEntity[] entities)
         {
-            ExecuteBatchOperation(entities, OperationNames.InsertOrMerge);
+            ExecuteBatchOperation(entities, CtConstants.TableOpInsertOrMerge);
         }
 
         public async Task InsertOrMergeAsync(TAzureTableEntity[] entities)
         {
-            await ExecuteBatchOperationAsync(entities, OperationNames.InsertOrMerge).ConfigureAwait(false);
+            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpInsertOrMerge).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -84,7 +84,7 @@
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void InsertOrReplace(TAzureTableEntity tableEntity)
         {
-            TableOperation updateOperation = TableOperation.InsertOrReplace(tableEntity);
+            var updateOperation = TableOperation.InsertOrReplace(tableEntity);
             _table.Execute(updateOperation);
         }
 
@@ -98,7 +98,7 @@
         /// <param name="entities"></param>
         public void InsertOrReplace(TAzureTableEntity[] entities)
         {
-            ExecuteBatchOperation(entities, "InsertOrReplace");
+            ExecuteBatchOperation(entities, CtConstants.TableOpInsertOrReplace);
         }
 
         /// <summary>
@@ -121,7 +121,7 @@
         /// <param name="entities"></param>
         public void Insert(TAzureTableEntity[] entities)
         {
-            ExecuteBatchOperation(entities, "Insert");
+            ExecuteBatchOperation(entities, CtConstants.TableOpInsert);
         }
 
         /// <summary>
@@ -130,7 +130,7 @@
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Delete(TAzureTableEntity tableEntity)
         {
-            TableOperation deleteOperation = TableOperation.Delete(tableEntity);
+            var deleteOperation = TableOperation.Delete(tableEntity);
             _table.Execute(deleteOperation);
         }
 
@@ -144,7 +144,7 @@
         /// <param name="entities"></param>
         public void Delete(TAzureTableEntity[] entities)
         {
-            ExecuteBatchOperation(entities, "Delete");
+            ExecuteBatchOperation(entities, CtConstants.TableOpDelete);
         }
 
         /// <summary>
@@ -167,7 +167,7 @@
         /// <param name="entities"></param>
         public void Replace(TAzureTableEntity[] entities)
         {
-            ExecuteBatchOperation(entities, "Replace");
+            ExecuteBatchOperation(entities, CtConstants.TableOpReplace);
         }
 
         private void ExecuteBatchOperation(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
@@ -184,7 +184,7 @@
             foreach(var entity in entities)
             {
                 var entity1 = entity;
-                batchPartitionPairs.AddOrUpdate(entity.PartitionKey, new List<TAzureTableEntity> { entity }, (s, list) =>
+                batchPartitionPairs.AddOrUpdate(entity.PartitionKey, new List<TAzureTableEntity> {entity}, (s, list) =>
                 {
                     list.Add(entity1);
                     return list;
@@ -195,21 +195,20 @@
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
                 entityBatch.BatchList.ForEach(batchOp => _table.ExecuteBatch(batchOp));
             }
-            
         }
 
         private async Task ExecuteBatchOperationAsync(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
         {
-            if (entities == null)
+            if(entities == null)
             {
                 throw new ArgumentNullException("entities");
             }
-            if (string.IsNullOrEmpty(batchMethodName))
+            if(string.IsNullOrEmpty(batchMethodName))
             {
                 throw new ArgumentNullException("batchMethodName");
             }
             var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
-            foreach (var entity in entities)
+            foreach(var entity in entities)
             {
                 var entity1 = entity;
                 batchPartitionPairs.AddOrUpdate(entity.PartitionKey, new List<TAzureTableEntity> {entity}, (s, list) =>
@@ -218,7 +217,7 @@
                     return list;
                 });
             }
-            foreach (var pair in batchPartitionPairs)
+            foreach(var pair in batchPartitionPairs)
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
                 var batchTasks = entityBatch.BatchList.Select(batchOp => _table.ExecuteBatchAsync(batchOp));
@@ -243,8 +242,8 @@
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> GetByPartitionKey(string partitionKey)
         {
-            string pkFilter = TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
-            TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(pkFilter);
+            var pkFilter = TableQuery.GenerateFilterCondition(CtConstants.PropNamePartitionKey, QueryComparisons.Equal, partitionKey);
+            var query = new TableQuery<TAzureTableEntity>().Where(pkFilter);
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -283,10 +282,10 @@
         public IEnumerable<TAzureTableEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",
                                                                                string maxRowKey = "")
         {
-            string pKFilter = GeneratePartitionKeyFilterCondition(pK);
-            string rKMinimum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
+            var pKFilter = GeneratePartitionKeyFilterCondition(pK);
+            var rKMinimum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.GreaterThanOrEqual,
                 minRowKey);
-            string rKMaximum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, maxRowKey);
+            var rKMaximum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.LessThanOrEqual, maxRowKey);
             string combinedFilter;
             if(string.IsNullOrWhiteSpace(minRowKey))
             {
@@ -301,7 +300,7 @@
                 combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
                     TableOperators.And, rKMinimum);
             }
-            TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
+            var query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
@@ -323,14 +322,14 @@
         /// <returns></returns>
         public string GeneratePartitionKeyFilterCondition(string partitionKey)
         {
-            return TableQuery.GenerateFilterCondition("PartitionKey", QueryComparisons.Equal, partitionKey);
+            return TableQuery.GenerateFilterCondition(CtConstants.PropNamePartitionKey, QueryComparisons.Equal, partitionKey);
         }
 
         private TableQuery<TAzureTableEntity> CreateQueryWithPartitionKeyAndPropertyFilter(string partitionKey, string propertyFilter)
         {
             var pkFilter = GeneratePartitionKeyFilterCondition(partitionKey);
             var combinedFilter = string.Format("({0}) {1} ({2})", pkFilter, TableOperators.And, propertyFilter);
-            TableQuery<TAzureTableEntity> query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
+            var query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             return query;
         }
 
@@ -568,7 +567,7 @@
             {
                 _operationName = operationName;
                 EntitiesToBatch = new List<EntityBatchPair>();
-                foreach (var azureTableEntity in entities)
+                foreach(var azureTableEntity in entities)
                 {
                     EntitiesToBatch.Add(new EntityBatchPair(azureTableEntity));
                 }
@@ -590,15 +589,15 @@
                 const int maxBatchCount = 100;
                 const int maxBatchSize = 4194304;
                 var qtyRemaining = EntitiesToBatch.Count;
-                while (qtyRemaining > 0)
+                while(qtyRemaining > 0)
                 {
                     var batch = new TableBatchOperation();
                     var currentBatchQty = 0;
                     var currentBatchSize = 0;
-                    foreach (var entityBatchPair in EntitiesToBatch.Where(etb => !etb.IsInBatch).Select(e => e))
+                    foreach(var entityBatchPair in EntitiesToBatch.Where(etb => !etb.IsInBatch).Select(e => e))
                     {
                         var newSize = currentBatchSize + entityBatchPair.EntityByteSize;
-                        if (newSize <= maxBatchSize && currentBatchQty < maxBatchCount)
+                        if(newSize <= maxBatchSize && currentBatchQty < maxBatchCount)
                         {
                             AddOperationToBatch(ref batch, entityBatchPair.TableEntity, _operationName);
                             currentBatchQty++;
@@ -613,24 +612,24 @@
 
             private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
             {
-                switch (batchMethodName)
+                switch(batchMethodName)
                 {
-                    case OperationNames.Insert:
+                    case CtConstants.TableOpInsert:
                         tableBatchOperation.Insert(entity);
                         break;
-                    case OperationNames.InsertOrMerge:
+                    case CtConstants.TableOpInsertOrMerge:
                         tableBatchOperation.InsertOrMerge(entity);
                         break;
-                    case OperationNames.InsertOrReplace:
+                    case CtConstants.TableOpInsertOrReplace:
                         tableBatchOperation.InsertOrReplace(entity);
                         break;
-                    case OperationNames.Merge:
+                    case CtConstants.TableOpMerge:
                         tableBatchOperation.Merge(entity);
                         break;
-                    case OperationNames.Delete:
+                    case CtConstants.TableOpDelete:
                         tableBatchOperation.Delete(entity);
                         break;
-                    case OperationNames.Replace:
+                    case CtConstants.TableOpReplace:
                         tableBatchOperation.Replace(entity);
                         break;
                 }
@@ -660,17 +659,5 @@
             public int EntityByteSize { get; private set; }
             public bool IsInBatch { get; set; }
         }
-    }
-
-
-
-    internal class OperationNames
-    {
-        internal const string Insert = "Insert";
-        internal const string InsertOrMerge = "InsertOrMerge";
-        internal const string InsertOrReplace = "InsertOrReplace";
-        internal const string Merge = "Merge";
-        internal const string Delete = "Delete";
-        internal const string Replace = "Replace";
     }
 }
