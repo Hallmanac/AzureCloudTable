@@ -45,7 +45,8 @@
         /// </summary>
         public CloudTable Table { get { return _table; } }
 
-        #region Writes
+        #region ---Writes---
+
         /// <summary>
         ///     Executes a single table operation of the same name.
         /// </summary>
@@ -312,7 +313,7 @@
                     return list;
                 });
             }
-            // Iterating through the batch key-value pairs and executing the batch
+            // Iterating through the batch key-value pairs and executing the batch one partition at a time.
             foreach(var pair in batchPartitionPairs)
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
@@ -424,6 +425,19 @@
         }
 
         /// <summary>
+        ///     Returns a single table entity based on a given PartitionKey & RowKey combination.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="rowKey"></param>
+        /// <returns></returns>
+        public async Task<TAzureTableEntity> FindAsync(string partitionKey, string rowKey)
+        {
+            var query = _table.CreateQuery<TAzureTableEntity>().Where(tEnt => tEnt.PartitionKey == partitionKey && tEnt.RowKey == rowKey);
+            var retrieved = await _table.ExecuteAsync(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
+            return (TAzureTableEntity)retrieved.Result;
+        }
+
+        /// <summary>
         ///     Gets a series of table entities based on a single PartitionKey combined with a range of RowKey values.
         /// </summary>
         /// <param name="pK"></param>
@@ -452,18 +466,39 @@
                     TableOperators.And, rKMinimum);
             }
             var query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Gets a series of table entities based on a single PartitionKey combined with a range of RowKey values asynchronously.
+        /// </summary>
+        /// <param name="pK"></param>
+        /// <param name="minRowKey"></param>
+        /// <param name="maxRowKey"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string pK, string minRowKey = "",
+                                                                                                string maxRowKey = "")
+        {
+            var pKFilter = GeneratePartitionKeyFilterCondition(pK);
+            var rKMinimum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
+                minRowKey);
+            var rKMaximum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, maxRowKey);
+            string combinedFilter;
+            if (string.IsNullOrWhiteSpace(minRowKey))
             {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
+                combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMaximum);
             }
+            else if (string.IsNullOrWhiteSpace(maxRowKey))
+            {
+                combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMinimum);
+            }
+            else
+            {
+                combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
+                    TableOperators.And, rKMinimum);
+            }
+            var query = _table.CreateQuery<TAzureTableEntity>().Where(combinedFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -498,18 +533,23 @@
         {
             var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Async shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, string property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -525,18 +565,23 @@
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Async shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, byte[] property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -553,18 +598,23 @@
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
                 property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, bool property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -581,18 +631,24 @@
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
                 property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName,
+                                                                                        DateTimeOffset property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -609,18 +665,23 @@
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
                 property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, double property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -637,18 +698,23 @@
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
                 property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, Guid property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -665,18 +731,23 @@
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
                 property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
+        }
+
+        /// <summary>
+        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, int property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -693,19 +764,25 @@
             var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal,
                 property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
-            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
-            {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
-                {
-                    yield return entity;
-                }
-            }
+            return RunQuerySegment(query);
         }
+
+        /// <summary>
+        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
+        ///     all appropriate table entity types.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="propertyName"></param>
+        /// <param name="property"></param>
+        /// <returns></returns>
+        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, long property)
+        {
+            var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            return await RunQuerySegmentAsync(query).ConfigureAwait(false);
+        }
+
         #endregion
 
         #endregion
