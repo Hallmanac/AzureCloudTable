@@ -8,6 +8,7 @@
     using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Table;
+    using Microsoft.WindowsAzure.Storage.Table.Queryable;
     using ServiceStack.Text;
 
     /// <summary>
@@ -328,7 +329,7 @@
         /// <returns>TableQuery object</returns>
         public TableQuery<TAzureTableEntity> Query()
         {
-            return new TableQuery<TAzureTableEntity>();
+            return _table.CreateQuery<TAzureTableEntity>();
         }
 
         /// <summary>
@@ -338,20 +339,74 @@
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> GetByPartitionKey(string partitionKey)
         {
-            var pkFilter = TableQuery.GenerateFilterCondition(CtConstants.PropNamePartitionKey, QueryComparisons.Equal, partitionKey);
-            var query = new TableQuery<TAzureTableEntity>().Where(pkFilter);
+            return Query().Where(tEnt => tEnt.PartitionKey == partitionKey);
+        }
+
+        public async Task<List<TAzureTableEntity>> GetByPartitionKeyAsync(string partitionKey)
+        {
+            var theQuery = Query().Where(tEnt => tEnt.PartitionKey == partitionKey);
+            return await RunQuerySegmentAsync(theQuery.AsTableQuery()).ConfigureAwait(false);
+        }
+
+        private IEnumerable<TAzureTableEntity> RunQuerySegment(TableQuery<TAzureTableEntity> theQuery)
+        {
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
-                currentQuerySegment = _table.ExecuteQuerySegmented(query,
-                    currentQuerySegment != null
-                        ? currentQuerySegment.ContinuationToken
-                        : null);
-                foreach(var entity in currentQuerySegment)
+                currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
+                foreach (var entity in currentQuerySegment)
                 {
                     yield return entity;
                 }
             }
+        }
+
+        private async Task<List<TAzureTableEntity>> RunQuerySegmentAsync(TableQuery<TAzureTableEntity> tableQuery)
+        {
+            TableQuerySegment<TAzureTableEntity> querySegment = null;
+            var returnList = new List<TAzureTableEntity>();
+            while(querySegment == null || querySegment.ContinuationToken != null)
+            {
+                querySegment = await _table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
+                returnList.AddRange(querySegment);
+            }
+            return returnList;
+        }
+
+        private IEnumerable<TAzureTableEntity> RunQuerySegmentWithFilter(TableQuery<TAzureTableEntity> theQuery,
+                                                                         Func<TAzureTableEntity, bool> customFilter)
+        {
+            TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
+            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            {
+                currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
+                foreach (var entity in currentQuerySegment)
+                {
+                    if(customFilter(entity))
+                    {
+                        yield return entity;
+                    }
+                }
+            }
+        }
+
+        private async Task<List<TAzureTableEntity>> RunQuerySegmentWithFilterAsync(TableQuery<TAzureTableEntity> tableQuery,
+                                                                                   Func<TAzureTableEntity, bool> customFilter)
+        {
+            TableQuerySegment<TAzureTableEntity> querySegment = null;
+            var returnList = new List<TAzureTableEntity>();
+            while(querySegment == null || querySegment.ContinuationToken != null)
+            {
+                querySegment = await _table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
+                foreach(var entity in querySegment)
+                {
+                    if(customFilter(entity))
+                    {
+                        returnList.Add(entity);
+                    }
+                }
+            }
+            return returnList;
         }
 
         /// <summary>
