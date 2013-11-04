@@ -453,8 +453,21 @@
             ExecuteTableOperation(domainEntities, typeOfSave);
         }
 
+        /// <summary>
+        /// Asynchronously writes the domain entity to the Table based on the kind of Table Operation specified in the SaveType enum.
+        /// </summary>
+        /// <param name="domainEntity"></param>
+        /// <param name="typeOfSave"></param>
+        /// <returns></returns>
         public async Task SaveAsync(TDomainEntity domainEntity, SaveType typeOfSave) { await ExecuteTableOperationAsync(domainEntity, typeOfSave); }
 
+        /// <summary>
+        /// Asynchronously writes the domain entities to their respective tables based on the kind of table operation specified by the
+        /// SaveType enum parameter.
+        /// </summary>
+        /// <param name="domainEntities"></param>
+        /// <param name="typeOfSave"></param>
+        /// <returns></returns>
         public async Task SaveAsync(IEnumerable<TDomainEntity> domainEntities, SaveType typeOfSave)
         {
             await ExecuteTableOperationAsync(domainEntities, typeOfSave);
