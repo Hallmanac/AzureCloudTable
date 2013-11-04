@@ -476,7 +476,7 @@
         /// <param name="minRowKey"></param>
         /// <param name="maxRowKey"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string pK, string minRowKey = "",
+        public async Task<List<TAzureTableEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string pK, string minRowKey = "",
                                                                                                 string maxRowKey = "")
         {
             var pKFilter = GeneratePartitionKeyFilterCondition(pK);
@@ -545,7 +545,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, string property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, string property)
         {
             var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -577,7 +577,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, byte[] property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, byte[] property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -610,7 +610,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, bool property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, bool property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -643,7 +643,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName,
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName,
                                                                                         DateTimeOffset property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal, property);
@@ -677,7 +677,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, double property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, double property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -710,7 +710,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, Guid property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, Guid property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -743,7 +743,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, int property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, int property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -776,7 +776,7 @@
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<IEnumerable<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, long property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, long property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
