@@ -63,6 +63,7 @@
     <Compile Include="CtConstants.cs" />
     <Compile Include="IndexedObject.cs" />
     <Compile Include="PartitionSchema.cs" />
+    <Compile Include="SaveType.cs" />
     <Compile Include="TableAccessContext.cs" />
     <Compile Include="CloudTableContext.cs" />
     <Compile Include="ExtensionMethods.cs" />

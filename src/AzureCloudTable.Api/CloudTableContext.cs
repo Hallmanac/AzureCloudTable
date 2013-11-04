@@ -5,6 +5,7 @@ using ServiceStack.Text;
 
 namespace AzureCloudTableContext.Api
 {
+    using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Table;
 
@@ -131,66 +132,102 @@ namespace AzureCloudTableContext.Api
                                  Guid.NewGuid());
         }
 
+        #region ---- Write Operations ----
+
+        /// <summary>
+        /// Writes the domain entity to the Table based on the kind of Table Operation specified in the SaveType enum.
+        /// </summary>
+        /// <param name="domainEntity"></param>
+        /// <param name="typeOfSave"></param>
+        public void Save(TDomainEntity domainEntity, SaveType typeOfSave)
+        {
+            ExecuteTableOperation(domainEntity, typeOfSave);
+        }
+
+        /// <summary>
+        /// Writes the domain entities to their respective tables based on the kind of table operation specified by the SaveType enum parameter.
+        /// </summary>
+        /// <param name="domainEntities"></param>
+        /// <param name="typeOfSave"></param>
+        public void Save(IEnumerable<TDomainEntity> domainEntities, SaveType typeOfSave)
+        {
+            ExecuteTableOperation(domainEntities, typeOfSave);
+        }
+
+        public async Task SaveAsync(TDomainEntity domainEntity, SaveType typeOfSave)
+        {
+            await ExecuteTableOperationAsync(domainEntity, typeOfSave);
+        }
+
+        public async Task SaveAsync(IEnumerable<TDomainEntity> domainEntities, SaveType typeOfSave)
+        {
+            await ExecuteTableOperationAsync(domainEntities, typeOfSave);
+        }
+
         /// <summary>
         /// Executes a single "InsertOrMerge" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void InsertOrMerge(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpInsertOrMerge); }
+        public void InsertOrMerge(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, SaveType.InsertOrMerge); }
 
         /// <summary>
         /// Executes a batch "InsertOrMerge" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void InsertOrMerge(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpInsertOrMerge); }
+        public void InsertOrMerge(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, SaveType.InsertOrMerge); }
 
         /// <summary>
         /// Executes a single "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void InsertOrReplace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpInsertOrReplace); }
+        public void InsertOrReplace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, SaveType.InsertOrReplace); }
 
         /// <summary>
         /// Executes batch "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
         public void InsertOrReplace(TDomainEntity[] domainEntities) { 
-            ExecuteTableOperation(domainEntities, CtConstants.TableOpInsertOrReplace); }
+            ExecuteTableOperation(domainEntities, SaveType.InsertOrReplace); }
 
         /// <summary>
         /// Executes a single "Insert" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Insert(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpInsert); }
+        public void Insert(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, SaveType.Insert); }
 
         /// <summary>
         /// Executes a batch "Insert" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Insert(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpInsert); }
+        public void Insert(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, SaveType.Insert); }
 
         /// <summary>
         /// Executes a single "Delete" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Delete(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpDelete); }
+        public void Delete(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, SaveType.Delete); }
 
         /// <summary>
         /// Executes a batch "Delete" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Delete(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpDelete); }
+        public void Delete(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, SaveType.Delete); }
 
         /// <summary>
         /// Executes a single "Replace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
-        public void Replace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, CtConstants.TableOpReplace); }
+        public void Replace(TDomainEntity domainEntity) { ExecuteTableOperation(domainEntity, SaveType.Replace); }
 
         /// <summary>
         /// Executes a batch "Replace" table operation.
         /// </summary>
         /// <param name="domainEntities"></param>
-        public void Replace(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, CtConstants.TableOpReplace); }
+        public void Replace(TDomainEntity[] domainEntities) { ExecuteTableOperation(domainEntities, SaveType.Replace); }
+
+        #endregion ---- Write Operations ----
+
+        #region ---- Read Operations ----
 
         /// <summary>
         /// Gets all the entities via the DefaultSchema.
@@ -201,6 +238,16 @@ namespace AzureCloudTableContext.Api
             return _tableAccessContext.GetByPartitionKey(_defaultSchemaName)
                 .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
+
+        /// <summary>
+        /// Gets all the entities via the DefaultSchema asynchronously.
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<TDomainEntity>> GetByDefaultSchemaAsync()
+        {
+            var partition = await _tableAccessContext.GetByPartitionKeyAsync(_defaultSchemaName);
+            return partition.Select(cte => cte.DomainObjectInstance).ToList();
+        } 
 
         /// <summary>
         /// Gets a domain entity using the partition partitionKey's PartitionKey (for the PartitionKey) and the entity's Id (for the RowKey).
@@ -221,7 +268,24 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Retrieves all domain entities within a given PartitionKey.
+        /// Asynchronously gets a domain entity by the ID using the given entityId and based on the index defined by the given partitionKey.
+        /// If the <param name="partitionKey"></param> parameter is left null then the DefaultSchema is used. 
+        /// </summary>
+        /// <param name="entityId"></param>
+        /// <param name="partitionKey"></param>
+        /// <returns></returns>
+        public async Task<TDomainEntity> GetByIdAsync(object entityId, string partitionKey = null)
+        {
+            if(entityId == null) return null;
+            var serializedEntityId = JsonSerializer.SerializeToString(entityId, entityId.GetType());
+            if (partitionKey == null)
+                partitionKey = DefaultSchema.PartitionKey;
+            var tableEntity = await _tableAccessContext.FindAsync(partitionKey, serializedEntityId);
+            return tableEntity.DomainObjectInstance;
+        }
+
+        /// <summary>
+        /// Retrieves all domain entities within a given Partition.
         /// </summary>
         /// <param name="partitionKey">If the object being passed in is not a string, it gets serialized to a Jsv string (a la 
         /// ServiceStack.Text library) and that string gets used as a PartitionKey.</param>
@@ -241,6 +305,23 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
+        /// Asynchronously retrieves all domain entities within a given Partition.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <returns></returns>
+        public async Task<List<TDomainEntity>> GetByPartitionKeyAsync(object partitionKey)
+        {
+            if (partitionKey is string)
+            {
+                var entities = await _tableAccessContext.GetByPartitionKeyAsync(partitionKey as string);
+                return entities.Select(tableEntity => tableEntity.DomainObjectInstance).ToList();
+            }
+            var serializedPartitionKey = JsonSerializer.SerializeToString(partitionKey, partitionKey.GetType());
+            var ents = await _tableAccessContext.GetByPartitionKeyAsync(serializedPartitionKey);
+            return ents.Select(azureTableEntity => azureTableEntity.DomainObjectInstance).ToList();
+        } 
+
+        /// <summary>
         /// Retrieves a set of domain entities based on a given PartitionScheme and an optional RowKey range.
         /// </summary>
         /// <param name="partitionKey"></param>
@@ -253,6 +334,19 @@ namespace AzureCloudTableContext.Api
             return
                 _tableAccessContext.GetByPartitionKeyWithRowKeyRange(partitionKey, minRowKey, maxRowKey)
                     .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
+        }
+
+        /// <summary>
+        /// Retrieves a set of domain entities based on a given PartitionScheme and an optional RowKey range.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="minRowKey"></param>
+        /// <param name="maxRowKey"></param>
+        /// <returns></returns>
+        public async Task<List<TDomainEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string partitionKey, string minRowKey = "", string maxRowKey = "")
+        {
+            var entites = await _tableAccessContext.GetByPartitionKeyWithRowKeyRangeAsync(partitionKey, minRowKey, maxRowKey);
+            return entites.Select(ent => ent.DomainObjectInstance).ToList();
         }
 
         /// <summary>
@@ -272,11 +366,33 @@ namespace AzureCloudTableContext.Api
                         }
                 };
             var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty, tempCloudTableEntity.IndexedProperty.GetType());
-            const string nameOfIndexedProp = CtConstants.PropNameIndexedProperty;
             
             return _tableAccessContext.QueryWherePropertyEquals(partitionKey,
-                nameOfIndexedProp, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
+                CtConstants.PropNameIndexedProperty, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
+
+        /// <summary>
+        /// Asynchronously gets a set of domain entities based on a given ParitionSchema with a filter based on the <param name="indexedProperty"></param> that 
+        /// gets passed in.
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <param name="indexedProperty"></param>
+        /// <returns></returns>
+        public async Task<List<TDomainEntity>> GetByIndexedPropertyAsync(string partitionKey, object indexedProperty)
+        {
+            var tempCloudTableEntity = new CloudTableEntity<TDomainEntity>
+            {
+                IndexedProperty =
+                {
+                    ValueBeingIndexed = indexedProperty
+                }
+            };
+            var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty, tempCloudTableEntity.IndexedProperty.GetType());
+            var entities = await _tableAccessContext.QueryWherePropertyEqualsAsync(partitionKey, CtConstants.PropNameIndexedProperty, serializedIndexedProperty);
+            return entities.Select(cte => cte.DomainObjectInstance).ToList();
+        } 
+
+        #endregion ---- Read Operations ----
 
         private void Init(CloudStorageAccount storageAccount, string propertyNameOfEntityId, string tableName)
         {
@@ -379,13 +495,50 @@ namespace AzureCloudTableContext.Api
             }
         }
 
+        private async Task ValidateTableEntityAgainstPartitionSchemasAsync(CloudTableEntity<TDomainEntity> tableEntity)
+        {
+            foreach (var partitionSchema in PartitionSchemas)
+            {
+                if (partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
+                {
+                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance);
+                    tempTableEntity.PartitionKey = partitionSchema.PartitionKey;
+
+                    // Checks if the current partition key has been registered with the list of partition keys for the table
+                    if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
+                        .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
+                    {
+                        _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
+                        await SavePartitionKeysAsync();
+                    }
+
+                    tempTableEntity.RowKey = partitionSchema.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
+
+                    // Need to get the Object that is to be indexed and then wrap it in a reference object for proper JSV serialization.
+                    var indexedPropertyObject = partitionSchema.GetIndexedPropertyFromCriteria(tempTableEntity.DomainObjectInstance);
+                    tempTableEntity.IndexedProperty = new IndexedObject
+                    {
+                        ValueBeingIndexed = indexedPropertyObject
+                    };
+                    partitionSchema.CloudTableEntities.Add(tempTableEntity);
+                }
+            }
+        }
+
         private void SavePartitionKeys()
         {
             _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
-        private void ExecuteTableOperation(IEnumerable<TDomainEntity> domainEntities, string batchOperation)
+        private async Task SavePartitionKeysAsync()
         {
+            await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntity);
+        }
+
+        private void ExecuteTableOperation(IEnumerable<TDomainEntity> domainEntities, SaveType batchOperation)
+        {
+            VerifyAllPartitionsExist();
+            RunTableIndexing();
             foreach (var domainEntity in domainEntities)
             {
                 var tempTableEntity = new CloudTableEntity<TDomainEntity>
@@ -397,7 +550,22 @@ namespace AzureCloudTableContext.Api
             WritePartitionSchemasToTable(batchOperation);
         }
 
-        private void ExecuteTableOperation(TDomainEntity domainEntity, string batchOperation)
+        private async Task ExecuteTableOperationAsync(IEnumerable<TDomainEntity> domainEntities, SaveType batchOperation)
+        {
+            await VerifyAllPartitionsExistAsync();
+            await RunTableIndexingAsync();
+            foreach (var domainEntity in domainEntities)
+            {
+                var tempTableEntity = new CloudTableEntity<TDomainEntity>
+                {
+                    DomainObjectInstance = domainEntity
+                };
+                await ValidateTableEntityAgainstPartitionSchemasAsync(tempTableEntity);
+            }
+            WritePartitionSchemasToTable(batchOperation);
+        }
+
+        private void ExecuteTableOperation(TDomainEntity domainEntity, SaveType batchOperation)
         {
             VerifyAllPartitionsExist();
             RunTableIndexing();
@@ -407,6 +575,18 @@ namespace AzureCloudTableContext.Api
             };
             ValidateTableEntityAgainstPartitionSchemas(tempTableEntity);
             WritePartitionSchemasToTable(batchOperation);
+        }
+
+        private async Task ExecuteTableOperationAsync(TDomainEntity domainEntity, SaveType batchOperation)
+        {
+            await VerifyAllPartitionsExistAsync();
+            await RunTableIndexingAsync();
+            var tempTableEntity = new CloudTableEntity<TDomainEntity>
+            {
+                DomainObjectInstance = domainEntity
+            };
+            await ValidateTableEntityAgainstPartitionSchemasAsync(tempTableEntity);
+            await WritePartitionSchemasToTableAsync(batchOperation);
         }
 
         private void VerifyAllPartitionsExist()
@@ -428,15 +608,42 @@ namespace AzureCloudTableContext.Api
                 _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
         }
 
+        private async Task VerifyAllPartitionsExistAsync()
+        {
+            var shouldWriteToTable = false;
+            // Check local list of Partition Schemas against the list of partition keys in _table Context
+            PartitionSchemas.ForEach(schema =>
+            {
+                if (!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
+                {
+                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
+                    if (!PartitionKeysInTable.Contains(schema.PartitionKey))
+                        PartitionKeysInTable.Add(schema.PartitionKey);
+                    shouldWriteToTable = true;
+                    _needToRunTableIndices = true;
+                }
+            });
+            if (shouldWriteToTable)
+                await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntity);
+        }
+
         private void RunTableIndexing()
         {
             if(!_needToRunTableIndices) return;
             var defaultPartitionEntities = GetByDefaultSchema().ToList();
-            InsertOrReplace(defaultPartitionEntities.ToArray());
+            Save(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
             _needToRunTableIndices = false;
         }
 
-        private void WritePartitionSchemasToTable(string batchOperation)
+        private async Task RunTableIndexingAsync()
+        {
+            if (!_needToRunTableIndices) return;
+            var defaultPartitionEntities = await GetByDefaultSchemaAsync();
+            await SaveAsync(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
+            _needToRunTableIndices = false;
+        }
+
+        private void WritePartitionSchemasToTable(SaveType batchOperation)
         {
             PartitionSchemas.ForEach(schema =>
             {
@@ -445,26 +652,59 @@ namespace AzureCloudTableContext.Api
                     var entitiesArray = schema.CloudTableEntities.ToArray();
                     switch(batchOperation)
                     {
-                        case CtConstants.TableOpInsertOrReplace:
+                        case SaveType.InsertOrReplace:
                             _tableAccessContext.InsertOrReplace(entitiesArray);
                             break;
-                        case CtConstants.TableOpInsertOrMerge:
-                            _tableAccessContext.InsertOrMerge(entitiesArray);
+                        case SaveType.InsertOrMerge:
+                            // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
+                            _tableAccessContext.InsertOrReplace(entitiesArray);
                             break;
-                        case CtConstants.TableOpInsert:
+                        case SaveType.Insert:
                             _tableAccessContext.Insert(entitiesArray);
                             break;
-                        case CtConstants.TableOpReplace:
+                        case SaveType.Replace:
                             _tableAccessContext.Replace(entitiesArray);
                             break;
-                        case CtConstants.TableOpDelete:
+                        case SaveType.Delete:
                             _tableAccessContext.Delete(entitiesArray);
                             break;
                     }
-                    _tableAccessContext.InsertOrReplace(entitiesArray);
+                    //_tableAccessContext.InsertOrReplace(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
                 }
                 schema.CloudTableEntities.Clear();
             });
+        }
+
+        private async Task WritePartitionSchemasToTableAsync(SaveType batchOperation)
+        {
+            foreach(var schema in PartitionSchemas)
+            {
+                if (schema.CloudTableEntities.Count > 0)
+                {
+                    var entitiesArray = schema.CloudTableEntities.ToArray();
+                    switch (batchOperation)
+                    {
+                        case SaveType.InsertOrReplace:
+                            await _tableAccessContext.InsertOrReplaceAsync(entitiesArray);
+                            break;
+                        case SaveType.InsertOrMerge:
+                            // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
+                            await _tableAccessContext.InsertOrReplaceAsync(entitiesArray);
+                            break;
+                        case SaveType.Insert:
+                            await _tableAccessContext.InsertAsync(entitiesArray);
+                            break;
+                        case SaveType.Replace:
+                            await _tableAccessContext.ReplaceAsync(entitiesArray);
+                            break;
+                        case SaveType.Delete:
+                            await _tableAccessContext.DeleteAsync(entitiesArray);
+                            break;
+                    }
+                    // await _tableAccessContext.InsertOrReplaceAsync(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
+                }
+                schema.CloudTableEntities.Clear();
+            }
         }
     }
 }
