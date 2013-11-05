@@ -1,7 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csproj", "{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureCloudTableContext.Api", "..\src\AzureCloudTable.Api\AzureCloudTableContext.Api.csproj", "{2F903A85-EE73-4A46-813E-83E258BA9F6B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -13,6 +17,10 @@ Global
 		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,37 +1,44 @@
-﻿using System;
+﻿namespace Sample
+{
+using System;
 using System.Collections.Generic;
+    using System.Diagnostics;
 using System.Linq;
+    using System.Net;
 using ServiceStack.Text;
 
-namespace Sample
+    internal class Program
 {
-    class Program
-    {
         private static void Main(string[] args)
         {
+            var sw = new Stopwatch();
+
             #region First Test
             var adminUser = new List<Admin>();
-
             Console.WriteLine("Initializing User Repo...");
-            var startTime = DateTimeOffset.Now;
+            Console.WriteLine("The nagle = {0}", ServicePointManager.UseNagleAlgorithm);
+            Console.WriteLine("The Expect100 status is {0}", ServicePointManager.Expect100Continue);
+
+            sw.Start();
             var userRepo = new UserRepository();
-            var endTime = DateTimeOffset.Now;
-            var elapsedTime = (endTime - startTime).Milliseconds;
-
-            Console.WriteLine("Repo took {0} milliseconds to complete.", elapsedTime.ToString());
+            sw.Stop();
+            Console.WriteLine("Repo took {0} milliseconds to complete.", sw.ElapsedMilliseconds);
+            Console.WriteLine("The nagle = {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.Expect100Continue);
+            Console.WriteLine("The Expect100 status is {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.UseNagleAlgorithm);
+            sw.Reset();
+            Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
-
-            startTime = DateTimeOffset.Now;
+            sw.Start();
             var existingUsers = userRepo.GetAllUsers().ToList();
-            endTime = DateTimeOffset.Now;
-            elapsedTime = (endTime - startTime).Milliseconds;
-            Console.WriteLine("Getting all Users took {0} milliseconds.", elapsedTime);
-            Console.WriteLine("There were {0} users: ", existingUsers.Count.ToString());
+            sw.Stop();
+            Console.WriteLine("Getting all Users took {0} milliseconds.", sw.ElapsedMilliseconds);
+            Console.WriteLine("There were {0} users: ", existingUsers.Count);
+            sw.Reset();
             Console.WriteLine("Press any key to continue...");
             Console.ReadLine();
-
-            if(existingUsers.Count < 1)
+            if (existingUsers.Count < 1)
             {
+                #region Initialize Users
                 var user1 = new Admin
                 {
                     UserId = Guid.NewGuid(),
@@ -64,7 +71,6 @@ namespace Sample
                     },
                     Employee = "Brian"
                 };
-
                 var user3 = new Standard
                 {
                     UserId = Guid.NewGuid(),
@@ -81,55 +87,53 @@ namespace Sample
                     },
                     Manager = "Brian"
                 };
-                Console.WriteLine("Hit enter to see info for User 1.");
+                #endregion --Initialize Users--
+
+                Console.WriteLine("Press enter to see info for User 1.");
                 Console.ReadLine();
                 Console.WriteLine("User 1 is: \n{0}", user1.SerializeAndFormat());
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
-
                 Console.WriteLine("Saving Users...");
-                startTime = DateTimeOffset.Now;
+                sw.Start();
                 userRepo.Save(user1);
-                endTime = DateTimeOffset.Now;
-                elapsedTime = (endTime - startTime).Milliseconds;
-                Console.WriteLine("Users saved in {0} milliseconds.", elapsedTime.ToString());
+                sw.Stop();
+                Console.WriteLine("Users saved in {0} milliseconds.", sw.ElapsedMilliseconds);
+                sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
-
                 Console.WriteLine("Getting all users...");
-                startTime = DateTimeOffset.Now;
-                
+                sw.Start();
                 var allUsersGotten = userRepo.GetAllUsers().ToList();
-                endTime = DateTimeOffset.Now;
-                elapsedTime = (endTime - startTime).Milliseconds;
-                foreach(var user in allUsersGotten)
+                sw.Stop();
+                foreach (var user in allUsersGotten)
                 {
                     var userItem = string.Format("{0}", JsonSerializer.SerializeToString(user, user.GetType()));
                     Console.WriteLine("{0}", userItem.SerializeAndFormat());
                     /*Console.WriteLine("{0}", JsonSerializer.SerializeToString(user, user.GetType()));*/
                 }
                 /*Console.WriteLine("All Users:\n{0}", allUsersGotten.SerializeAndFormat());*/
-                Console.WriteLine("Time taken was {0} milliseconds.", elapsedTime);
+                Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+                sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
-
                 var userList = new List<User>
                 {
                     user2,
                     user3
                 };
-
                 Console.WriteLine("Saving the rest of the users...");
-                startTime = DateTimeOffset.Now;
+                sw.Start();
                 userRepo.Save(userList.ToArray());
-                endTime = DateTimeOffset.Now;
-                elapsedTime = (endTime - startTime).Milliseconds;
-                Console.WriteLine("Users List Saved in {0} milliseconds.", elapsedTime.ToString());
+                sw.Stop();
+                Console.WriteLine("Users List Saved in {0} milliseconds.", sw.ElapsedMilliseconds);
+                sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
-            } else
+            }
+            else
             {
-                foreach(var existingUser in existingUsers)
+                foreach (var existingUser in existingUsers)
                 {
                     Console.WriteLine("{0}", JsonSerializer.SerializeToString(existingUser, existingUser.GetType()));
                 }
@@ -137,69 +141,75 @@ namespace Sample
                 Console.WriteLine("All Users listed above.");
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
-
                 Console.WriteLine("Changing State property on users (except those in FL)...");
-                foreach(var user in existingUsers)
+                sw.Start();
+                foreach (var user in existingUsers)
                 {
-                    if(user.UserAddress.State == "FL") continue;
+                    if (user.UserAddress.State == "FL") continue;
                     user.UserAddress.State = "NY";
                     user.Version++;
                 }
-
                 userRepo.Save(existingUsers.ToArray());
+                sw.Stop();
                 Console.WriteLine("State property changed.");
+                Console.WriteLine("Time take was {0} milliseconds.", sw.ElapsedMilliseconds);
+                sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
-                
                 Console.WriteLine("Getting users with first name of Brian...");
-                startTime = DateTimeOffset.Now;
+                sw.Start();
                 var usersWithFirstNameBrian = userRepo.GetUsersByFirstName("Brian").ToList();
-                endTime = DateTimeOffset.Now;
-                elapsedTime = (endTime - startTime).Milliseconds;
+                sw.Stop();
                 Console.WriteLine("List of Users with First Name of Brian:\n{0}", usersWithFirstNameBrian.SerializeAndFormat());
-                Console.WriteLine("\nTime taken was {0} milliseconds.", elapsedTime.ToString());
+                Console.WriteLine("\nTime taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+                sw.Reset();
                 Console.WriteLine("Press any key to continue...");
-
                 Console.ReadLine();
             }
-
             Console.WriteLine("Gettin all Admin user types...");
-            foreach(var user in userRepo.GetAllUsers())
+            sw.Start();
+            foreach (var user in userRepo.GetAllUsers())
             {
-                if(user.GetType().Name == "Admin")
+                if (user.GetType().Name == "Admin")
                 {
                     adminUser.Add((Admin)user);
                 }
             }
+            sw.Stop();
             Console.WriteLine("List of Admin users: \n{0}", adminUser.SerializeAndFormat());
+            Console.WriteLine("\nTime taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+            sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
-
             Console.WriteLine("Getting users that live in Florida...");
-            startTime = DateTimeOffset.Now;
+            sw.Start();
             var usersInFlorida = userRepo.GetUsersThatLiveInFlorida().ToList();
-            endTime = DateTimeOffset.Now;
-            elapsedTime = (endTime - startTime).Milliseconds;
-            if(usersInFlorida.Count > 0)
+            sw.Stop();
+            if (usersInFlorida.Count > 0)
             {
                 Console.WriteLine("Users in Florida:\n{0}", usersInFlorida.SerializeAndFormat());
-            } else
+            }
+            else
             {
                 Console.WriteLine("No Users live in Florida.");
             }
-            Console.WriteLine("Operation took {0} milliseconds.", elapsedTime.ToString());
-            Console.WriteLine("Hit any key to continue...");
+            Console.WriteLine("Operation took {0} milliseconds.", sw.ElapsedMilliseconds);
+            sw.Reset();
+            Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
-
             Console.WriteLine("Getting versions for Jennifer Admin...");
+            sw.Start();
             var jenniferUser = userRepo.GetUsersByFirstName("Jennifer");
             var listOfJenniferVersions = new List<Admin>();
-            foreach(var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
+            foreach (var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
             {
                 listOfJenniferVersions.Add((Admin)userVersion);
             }
+            sw.Stop();
             Console.WriteLine("All Versions of AdminUser...\n{0}", listOfJenniferVersions.SerializeAndFormat());
-            Console.WriteLine("Hit any key to continue...");
+            Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+            sw.Reset();
+            Console.WriteLine("\nPress any key to continue...");
             /*Console.WriteLine("Getting versions for users...");
             if(existingUsers.Count < 1) existingUsers = userRepo.GetAllUsers().ToList();
             foreach(var user in existingUsers)
@@ -217,8 +227,6 @@ namespace Sample
             }*/
             Console.ReadLine();
             #endregion
-
-            
         }
     }
 }
