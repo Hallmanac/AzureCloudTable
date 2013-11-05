@@ -1,0 +1,46 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2011/10/nuspec.xsd">
+  <metadata>
+    <id>AzureCloudTableContext</id>
+    <version>2.1.0-beta</version>
+    <title>Azure Cloud Table Context</title>
+    <authors>Brian Hall</authors>
+    <owners>Brian Hall</owners>
+    <projectUrl>https://github.com/Hallmanac/AzureCloudTable</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>In short it enables the ability for POCO's to NOT have to inherit from TableEntity and allows for secondary indexes to be defined via a contextually managed set of partitioned keys. For a full description and the source code go to https://github.com/Hallmanac/AzureCloudTable/</description>
+    <summary>A wrapper around interacting with Azure Table Storage SDK (v2.1.0).</summary>
+    <releaseNotes>2.1.0-beta -- Refactored out the calls to GetPropertyName to improve performance. See issue #2 on github.com/Hallmanac/AzureCloudTable
+
+2.0.7-beta -- Updated nuget packages to latest versions. 
+
+2.0.6-beta -- Updated the actual version number of the assembly as well as changed the required dependency for WindowsAzure.Storage to be the latest v2.1.0.
+
+2.0.5-beta -- Fixed reference to incorrect version of Microsoft.WindowsAzure.Storage. It was pointed to v2.0.0 and is now correctly pointed to v2.1.0.
+
+2.0.4-beta -- Fixed references in nuget packages from disparate git branches.
+
+2.0.3-beta -- Updated Nuget packages.
+
+2.0.2-beta-- Updated Nuget packages to use the latest (stable) update of the Azure Storage client library.
+
+2.0.1-beta-- Added a check on the CloudTableContext class that verifies the the current runtime list of PartitionSchemas matches up to the stored list of partition keys. If there are "newly created" PartitionSchemas (i.e. someone changed the code to add a new schema) then on the first time it's encountered the table will get re-indexed by retrieving the default schema and re-saving them using all the current schemas.
+
+2.0.0-beta-- Added type information to the CloudTableEntity. Changed the serialization to include type information. Changed the default RowKey to be based on the ID of the provided TDomainObject. Fixed bugs related to batch commits.
+
+1.1.2 - Renamed some fluent api methods, added a static way to set the RowKeyCriteria to be a Chronological based (or Reverse Chronological Based) row key.
+
+1.1.0 - Made breaking changes to API. Simplified it to have only one partition key per schema.</releaseNotes>
+    <tags>Azure Table Storage Cloud Context Azure Table CloudTableContext Context</tags>
+    <dependencies>
+      <dependency id="WindowsAzure.Storage" version="2.1.0.3" />
+      <dependency id="ServiceStack.Text" version="3.9.70" />
+      <dependency id="Microsoft.WindowsAzure.ConfigurationManager" version="2.0.2.0" />
+    </dependencies>
+    <frameworkAssemblies>
+      <frameworkAssembly assemblyName="System.Core" targetFramework=".NETFramework4.5" />
+      <frameworkAssembly assemblyName="System" targetFramework=".NETFramework4.5" />
+      <frameworkAssembly assemblyName="System.Xml" targetFramework=".NETFramework4.5" />
+    </frameworkAssemblies>
+  </metadata>
+</package>
