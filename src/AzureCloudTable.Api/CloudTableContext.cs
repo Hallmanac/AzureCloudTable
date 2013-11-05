@@ -355,8 +355,11 @@
         {
             if(!_needToRunTableIndices) return;
             var defaultPartitionEntities = GetByDefaultSchema().ToList();
-            Save(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
             _needToRunTableIndices = false;
+            if(defaultPartitionEntities.Count > 1)
+            {
+                Save(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
+            }
         }
 
         private async Task RunTableIndexingAsync()
