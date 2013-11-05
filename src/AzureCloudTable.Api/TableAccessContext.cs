@@ -4,6 +4,7 @@
     using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Net;
     using System.Text;
     using System.Threading.Tasks;
     using Microsoft.WindowsAzure.Storage;
@@ -19,25 +20,19 @@
     /// <typeparam name="TAzureTableEntity"></typeparam>
     public class TableAccessContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {
-        private readonly CloudStorageAccount _storageAccount;
-        private readonly CloudTable _table;
+        private CloudStorageAccount _storageAccount;
+        private CloudTable _table;
 
         public TableAccessContext(CloudStorageAccount storageAccount)
         {
             var tableName = string.Format("{0}Table", typeof(TAzureTableEntity).Name);
-            _storageAccount = storageAccount;
-            var tableClient = storageAccount.CreateCloudTableClient();
-            _table = tableClient.GetTableReference(tableName);
-            _table.CreateIfNotExists();
+            InitTableAccess(storageAccount, tableName);
         }
 
         public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TAzureTableEntity).Name) : tableName;
-            _storageAccount = storageAccount;
-            var tableClient = storageAccount.CreateCloudTableClient();
-            _table = tableClient.GetTableReference(tableName);
-            _table.CreateIfNotExists();
+            InitTableAccess(storageAccount, tableName);
         }
 
         /// <summary>
@@ -45,8 +40,9 @@
         /// </summary>
         public CloudTable Table { get { return _table; } }
 
-        #region ---Writes---
+        public ServicePoint TableServicePoint { get; set; }
 
+        #region ---Writes---
         /// <summary>
         ///     Executes a single table operation of the same name.
         /// </summary>
@@ -92,7 +88,7 @@
         }
 
         /// <summary>
-        /// Executes a single InsertOrReplace table opertion asynchronously.
+        ///     Executes a single InsertOrReplace table opertion asynchronously.
         /// </summary>
         /// <param name="tableEntity"></param>
         /// <returns></returns>
@@ -116,8 +112,9 @@
         }
 
         /// <summary>
-        /// Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table requirements
-        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        ///     Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table
+        ///     requirements
+        ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         /// <returns></returns>
@@ -137,7 +134,7 @@
         }
 
         /// <summary>
-        /// Executes a single Insert asynchronously.
+        ///     Executes a single Insert asynchronously.
         /// </summary>
         /// <param name="tableEntity"></param>
         /// <returns></returns>
@@ -161,8 +158,9 @@
         }
 
         /// <summary>
-        /// Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table requirements
-        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        ///     Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table
+        ///     requirements
+        ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         /// <returns></returns>
@@ -182,7 +180,7 @@
         }
 
         /// <summary>
-        /// Executes a single Delete table operation asynchronously.
+        ///     Executes a single Delete table operation asynchronously.
         /// </summary>
         /// <param name="tableEntity"></param>
         /// <returns></returns>
@@ -206,8 +204,9 @@
         }
 
         /// <summary>
-        /// Executes a batch Delete asynchronously and groups the given entities into groups that meet the Azure Table requirements
-        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        ///     Executes a batch Delete asynchronously and groups the given entities into groups that meet the Azure Table
+        ///     requirements
+        ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         /// <returns></returns>
@@ -227,7 +226,7 @@
         }
 
         /// <summary>
-        /// Executes a single Replace table operation asynchronously.
+        ///     Executes a single Replace table operation asynchronously.
         /// </summary>
         /// <param name="tableEntity"></param>
         /// <returns></returns>
@@ -251,8 +250,9 @@
         }
 
         /// <summary>
-        /// Executes a batch Replace asynchronously and groups the given entities into groups that meet the Azure Table requirements
-        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        ///     Executes a batch Replace asynchronously and groups the given entities into groups that meet the Azure Table
+        ///     requirements
+        ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         /// <returns></returns>
@@ -282,7 +282,6 @@
                     return list;
                 });
             }
-
             // Iterating through the batch key-value pairs and executing the batch
             foreach(var pair in batchPartitionPairs)
             {
@@ -301,7 +300,6 @@
             {
                 throw new ArgumentNullException("batchMethodName");
             }
-
             // Creating a dictionary to group partitions together since a batch can only represent one partition.
             var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
             foreach(var entity in entities)
@@ -352,10 +350,11 @@
         private IEnumerable<TAzureTableEntity> RunQuerySegment(TableQuery<TAzureTableEntity> theQuery)
         {
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
-                currentQuerySegment = _table.ExecuteQuerySegmented(theQuery, currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
-                foreach (var entity in currentQuerySegment)
+                currentQuerySegment = _table.ExecuteQuerySegmented(theQuery,
+                    currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
+                foreach(var entity in currentQuerySegment)
                 {
                     yield return entity;
                 }
@@ -378,10 +377,10 @@
                                                                          Func<TAzureTableEntity, bool> customFilter)
         {
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
-            while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
+            while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
                 currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
-                foreach (var entity in currentQuerySegment)
+                foreach(var entity in currentQuerySegment)
                 {
                     if(customFilter(entity))
                     {
@@ -470,25 +469,26 @@
         }
 
         /// <summary>
-        /// Gets a series of table entities based on a single PartitionKey combined with a range of RowKey values asynchronously.
+        ///     Gets a series of table entities based on a single PartitionKey combined with a range of RowKey values
+        ///     asynchronously.
         /// </summary>
         /// <param name="pK"></param>
         /// <param name="minRowKey"></param>
         /// <param name="maxRowKey"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string pK, string minRowKey = "",
-                                                                                                string maxRowKey = "")
+                                                                                         string maxRowKey = "")
         {
             var pKFilter = GeneratePartitionKeyFilterCondition(pK);
             var rKMinimum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
                 minRowKey);
             var rKMaximum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, maxRowKey);
             string combinedFilter;
-            if (string.IsNullOrWhiteSpace(minRowKey))
+            if(string.IsNullOrWhiteSpace(minRowKey))
             {
                 combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMaximum);
             }
-            else if (string.IsNullOrWhiteSpace(maxRowKey))
+            else if(string.IsNullOrWhiteSpace(maxRowKey))
             {
                 combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMinimum);
             }
@@ -537,7 +537,7 @@
         }
 
         /// <summary>
-        /// Async shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Async shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -569,7 +569,7 @@
         }
 
         /// <summary>
-        /// Async shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Async shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -602,7 +602,7 @@
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -635,7 +635,7 @@
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -644,7 +644,7 @@
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName,
-                                                                                        DateTimeOffset property)
+                                                                                 DateTimeOffset property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
@@ -669,7 +669,7 @@
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -702,7 +702,7 @@
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -735,7 +735,7 @@
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -768,7 +768,7 @@
         }
 
         /// <summary>
-        /// Shortcut method that queries the table based on a given PartitionKey and given property with
+        ///     Shortcut method that queries the table based on a given PartitionKey and given property with
         ///     the same property name. Handles the continuation token scenario as well. Overloaded to accept
         ///     all appropriate table entity types.
         /// </summary>
@@ -782,10 +782,20 @@
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
-
         #endregion
 
         #endregion
+
+        private void InitTableAccess(CloudStorageAccount storageAccount, string tableName)
+        {
+            _storageAccount = storageAccount;
+            TableServicePoint = ServicePointManager.FindServicePoint(_storageAccount.TableEndpoint);
+            TableServicePoint.UseNagleAlgorithm = false;
+            TableServicePoint.Expect100Continue = false;
+            var tableClient = storageAccount.CreateCloudTableClient();
+            _table = tableClient.GetTableReference(tableName);
+            _table.CreateIfNotExists();
+        }
 
         internal class EntityBatch
         {
