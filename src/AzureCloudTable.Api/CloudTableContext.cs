@@ -367,8 +367,11 @@
         {
             if(!_needToRunTableIndices) return;
             var defaultPartitionEntities = await GetByDefaultSchemaAsync();
-            await SaveAsync(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
             _needToRunTableIndices = false;
+            if(defaultPartitionEntities.Count > 1)
+            {
+                await SaveAsync(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
+            }
         }
 
         private void WritePartitionSchemasToTable(SaveType batchOperation)
