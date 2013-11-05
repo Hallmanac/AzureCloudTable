@@ -7,6 +7,8 @@ using ServiceStack.Text;
 
 namespace AzureCloudTableContext.Api
 {
+    using System.Net;
+
     /// <summary>
     /// Class that provides direct interaction to the current Azure Table through commonly used techniques. 
     /// Uses a generic object that implements the ITableEntity interface. This class can be used in 
@@ -25,6 +27,7 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
+            ServicePointManager.Expect100Continue = false;
         }
         
         public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
@@ -34,6 +37,7 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
+            ServicePointManager.Expect100Continue = false;
         }
 
         /// <summary>
