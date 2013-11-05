@@ -354,7 +354,7 @@
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while (currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
-                currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
+                currentQuerySegment = _table.ExecuteQuerySegmented(theQuery, currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
                 foreach (var entity in currentQuerySegment)
                 {
                     yield return entity;
