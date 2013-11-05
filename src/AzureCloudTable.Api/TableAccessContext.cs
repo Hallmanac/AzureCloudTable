@@ -27,7 +27,6 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
-            ServicePointManager.Expect100Continue = false;
         }
         
         public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
@@ -37,7 +36,6 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
-            ServicePointManager.Expect100Continue = false;
         }
 
         /// <summary>
