@@ -1,16 +1,16 @@
 ﻿namespace AzureCloudTableContext.Api
 {
-using System;
+    using System;
     using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
+    using System.Collections.Generic;
+    using System.Linq;
     using System.Net;
     using System.Text;
     using System.Threading.Tasks;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+    using Microsoft.WindowsAzure.Storage;
+    using Microsoft.WindowsAzure.Storage.Table;
     using Microsoft.WindowsAzure.Storage.Table.Queryable;
-using ServiceStack.Text;
+    using ServiceStack.Text;
 
     /// <summary>
     ///     Class that provides direct interaction to the current Azure Table through commonly used techniques.
@@ -28,7 +28,7 @@ using ServiceStack.Text;
             var tableName = string.Format("{0}Table", typeof(TAzureTableEntity).Name);
             InitTableAccess(storageAccount, tableName);
         }
-        
+
         public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TAzureTableEntity).Name) : tableName;
@@ -266,7 +266,7 @@ using ServiceStack.Text;
             if(entities == null)
             {
                 throw new ArgumentNullException("entities");
-        }
+            }
             if(string.IsNullOrEmpty(batchMethodName))
             {
                 throw new ArgumentNullException("batchMethodName");
@@ -381,12 +381,12 @@ using ServiceStack.Text;
             {
                 currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
                 foreach(var entity in currentQuerySegment)
-            {
-                    if(customFilter(entity))
                 {
-                    yield return entity;
+                    if(customFilter(entity))
+                    {
+                        yield return entity;
+                    }
                 }
-            }
             }
         }
 
@@ -444,11 +444,11 @@ using ServiceStack.Text;
         /// <param name="maxRowKey"></param>
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",
-                                                                     string maxRowKey = "")
+                                                                               string maxRowKey = "")
         {
             var pKFilter = GeneratePartitionKeyFilterCondition(pK);
             var rKMinimum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.GreaterThanOrEqual,
-                                                                  minRowKey);
+                minRowKey);
             var rKMaximum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.LessThanOrEqual, maxRowKey);
             string combinedFilter;
             if(string.IsNullOrWhiteSpace(minRowKey))
@@ -462,7 +462,7 @@ using ServiceStack.Text;
             else
             {
                 combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
-                                               TableOperators.And, rKMinimum);
+                    TableOperators.And, rKMinimum);
             }
             var query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             return RunQuerySegment(query);
@@ -493,13 +493,13 @@ using ServiceStack.Text;
                 combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMinimum);
             }
             else
-                {
+            {
                 combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
                     TableOperators.And, rKMinimum);
-                }
+            }
             var query = _table.CreateQuery<TAzureTableEntity>().Where(combinedFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-            }
+        }
 
         /// <summary>
         ///     Shortcut method that returns a TableQuery.GenerateFilterCondition based on an equivalent to the given PartitionKey.
@@ -546,11 +546,11 @@ using ServiceStack.Text;
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, string property)
-            {
+        {
             var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-                }
+        }
 
         /// <summary>
         ///     Shortcut method that queries the table based on a given PartitionKey and given property with
@@ -578,11 +578,11 @@ using ServiceStack.Text;
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, byte[] property)
-            {
+        {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-                }
+        }
 
         /// <summary>
         ///     Shortcut method that queries the table based on a given PartitionKey and given property with
@@ -596,7 +596,7 @@ using ServiceStack.Text;
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, bool property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
-                                                                           property);
+                property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return RunQuerySegment(query);
         }
@@ -611,11 +611,11 @@ using ServiceStack.Text;
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, bool property)
-            {
+        {
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-                }
+        }
 
         /// <summary>
         ///     Shortcut method that queries the table based on a given PartitionKey and given property with
@@ -629,7 +629,7 @@ using ServiceStack.Text;
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, DateTimeOffset property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
-                                                                           property);
+                property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return RunQuerySegment(query);
         }
@@ -645,11 +645,11 @@ using ServiceStack.Text;
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName,
                                                                                  DateTimeOffset property)
-            {
+        {
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-                }
+        }
 
         /// <summary>
         ///     Shortcut method that queries the table based on a given PartitionKey and given property with
@@ -663,7 +663,7 @@ using ServiceStack.Text;
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, double property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
-                                                                           property);
+                property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return RunQuerySegment(query);
         }
@@ -678,11 +678,11 @@ using ServiceStack.Text;
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, double property)
-            {
+        {
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-                }
+        }
 
         /// <summary>
         ///     Shortcut method that queries the table based on a given PartitionKey and given property with
@@ -696,7 +696,7 @@ using ServiceStack.Text;
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, Guid property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
-                                                                           property);
+                property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return RunQuerySegment(query);
         }
@@ -711,11 +711,11 @@ using ServiceStack.Text;
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, Guid property)
-            {
+        {
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
-                }
+        }
 
         /// <summary>
         ///     Shortcut method that queries the table based on a given PartitionKey and given property with
@@ -729,7 +729,7 @@ using ServiceStack.Text;
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, int property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
-                                                                           property);
+                property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return RunQuerySegment(query);
         }
@@ -744,7 +744,7 @@ using ServiceStack.Text;
         /// <param name="property"></param>
         /// <returns></returns>
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, int property)
-                {
+        {
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal, property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
@@ -762,7 +762,7 @@ using ServiceStack.Text;
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, long property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal,
-                                                                           property);
+                property);
             var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
             return RunQuerySegment(query);
         }
@@ -802,11 +802,11 @@ using ServiceStack.Text;
             private readonly string _operationName;
 
             public EntityBatch(IEnumerable<TAzureTableEntity> entities, string operationName)
-                        {
+            {
                 _operationName = operationName;
                 EntitiesToBatch = new List<EntityBatchPair>();
                 foreach(var azureTableEntity in entities)
-                        {
+                {
                     EntitiesToBatch.Add(new EntityBatchPair(azureTableEntity));
                 }
                 BatchList = new List<TableBatchOperation>();
@@ -836,41 +836,41 @@ using ServiceStack.Text;
                     {
                         var newSize = currentBatchSize + entityBatchPair.EntityByteSize;
                         if(newSize <= maxBatchSize && currentBatchQty < maxBatchCount)
-                    {
+                        {
                             AddOperationToBatch(ref batch, entityBatchPair.TableEntity, _operationName);
                             currentBatchQty++;
                             currentBatchSize += entityBatchPair.EntityByteSize;
                             qtyRemaining--;
                             entityBatchPair.IsInBatch = true;
+                        }
                     }
-                }
                     BatchList.Add(batch);
+                }
             }
-        }
 
-        private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
-        {
-                switch(batchMethodName)
+            private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
             {
+                switch(batchMethodName)
+                {
                     case CtConstants.TableOpInsert:
-                    tableBatchOperation.Insert(entity);
-                    break;
+                        tableBatchOperation.Insert(entity);
+                        break;
                     case CtConstants.TableOpInsertOrMerge:
-                    tableBatchOperation.InsertOrMerge(entity);
-                    break;
+                        tableBatchOperation.InsertOrMerge(entity);
+                        break;
                     case CtConstants.TableOpInsertOrReplace:
-                    tableBatchOperation.InsertOrReplace(entity);
-                    break;
+                        tableBatchOperation.InsertOrReplace(entity);
+                        break;
                     case CtConstants.TableOpMerge:
-                    tableBatchOperation.Merge(entity);
-                    break;
+                        tableBatchOperation.Merge(entity);
+                        break;
                     case CtConstants.TableOpDelete:
-                    tableBatchOperation.Delete(entity);
-                    break;
+                        tableBatchOperation.Delete(entity);
+                        break;
                     case CtConstants.TableOpReplace:
-                    tableBatchOperation.Replace(entity);
-                    break;
-            }
+                        tableBatchOperation.Replace(entity);
+                        break;
+                }
             }
 
             private long BatchBytesSize()

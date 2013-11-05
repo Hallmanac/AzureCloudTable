@@ -1,14 +1,14 @@
 ﻿namespace Sample
 {
-using System;
-using System.Collections.Generic;
+    using System;
+    using System.Collections.Generic;
     using System.Diagnostics;
-using System.Linq;
+    using System.Linq;
     using System.Net;
-using ServiceStack.Text;
+    using ServiceStack.Text;
 
     internal class Program
-{
+    {
         private static void Main(string[] args)
         {
             var sw = new Stopwatch();
@@ -18,7 +18,6 @@ using ServiceStack.Text;
             Console.WriteLine("Initializing User Repo...");
             Console.WriteLine("The nagle = {0}", ServicePointManager.UseNagleAlgorithm);
             Console.WriteLine("The Expect100 status is {0}", ServicePointManager.Expect100Continue);
-
             sw.Start();
             var userRepo = new UserRepository();
             sw.Stop();
@@ -36,7 +35,7 @@ using ServiceStack.Text;
             sw.Reset();
             Console.WriteLine("Press any key to continue...");
             Console.ReadLine();
-            if (existingUsers.Count < 1)
+            if(existingUsers.Count < 1)
             {
                 #region Initialize Users
                 var user1 = new Admin
@@ -106,7 +105,7 @@ using ServiceStack.Text;
                 sw.Start();
                 var allUsersGotten = userRepo.GetAllUsers().ToList();
                 sw.Stop();
-                foreach (var user in allUsersGotten)
+                foreach(var user in allUsersGotten)
                 {
                     var userItem = string.Format("{0}", JsonSerializer.SerializeToString(user, user.GetType()));
                     Console.WriteLine("{0}", userItem.SerializeAndFormat());
@@ -133,7 +132,7 @@ using ServiceStack.Text;
             }
             else
             {
-                foreach (var existingUser in existingUsers)
+                foreach(var existingUser in existingUsers)
                 {
                     Console.WriteLine("{0}", JsonSerializer.SerializeToString(existingUser, existingUser.GetType()));
                 }
@@ -143,9 +142,9 @@ using ServiceStack.Text;
                 Console.ReadLine();
                 Console.WriteLine("Changing State property on users (except those in FL)...");
                 sw.Start();
-                foreach (var user in existingUsers)
+                foreach(var user in existingUsers)
                 {
-                    if (user.UserAddress.State == "FL") continue;
+                    if(user.UserAddress.State == "FL") continue;
                     user.UserAddress.State = "NY";
                     user.Version++;
                 }
@@ -168,9 +167,9 @@ using ServiceStack.Text;
             }
             Console.WriteLine("Gettin all Admin user types...");
             sw.Start();
-            foreach (var user in userRepo.GetAllUsers())
+            foreach(var user in userRepo.GetAllUsers())
             {
-                if (user.GetType().Name == "Admin")
+                if(user.GetType().Name == "Admin")
                 {
                     adminUser.Add((Admin)user);
                 }
@@ -185,7 +184,7 @@ using ServiceStack.Text;
             sw.Start();
             var usersInFlorida = userRepo.GetUsersThatLiveInFlorida().ToList();
             sw.Stop();
-            if (usersInFlorida.Count > 0)
+            if(usersInFlorida.Count > 0)
             {
                 Console.WriteLine("Users in Florida:\n{0}", usersInFlorida.SerializeAndFormat());
             }
@@ -201,7 +200,7 @@ using ServiceStack.Text;
             sw.Start();
             var jenniferUser = userRepo.GetUsersByFirstName("Jennifer");
             var listOfJenniferVersions = new List<Admin>();
-            foreach (var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
+            foreach(var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
             {
                 listOfJenniferVersions.Add((Admin)userVersion);
             }
