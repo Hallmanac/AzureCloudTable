@@ -20,7 +20,6 @@
         private bool _needToRunTableIndices;
         private CloudTableEntity<PartitionMetaData> _partitionMetaDataEntity;
         private CloudTable _table;
-        private TableAccessContext<CloudTableEntity<TDomainEntity>> _tableAccessContext;
 
         private TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
 
@@ -40,6 +39,8 @@
             tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TDomainEntity).Name) : tableName;
             Init(storageAccount, nameOfEntityIdProperty, tableName);
         }
+
+        public TableAccessContext<CloudTableEntity<TDomainEntity>> TableAccessContext { get; private set; }
 
         /// <summary>
         ///     Gets a list of the PartitionKeys that are used in the table.
@@ -72,7 +73,7 @@
         /// <returns></returns>
         public TableQuery<CloudTableEntity<TDomainEntity>> TableQuery()
         {
-            return _tableAccessContext.Query();
+            return TableAccessContext.Query();
         }
 
         /// <summary>
@@ -154,7 +155,7 @@
             _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount,
                 tableName);
             LoadTableMetaData();
-            _tableAccessContext = new TableAccessContext<CloudTableEntity<TDomainEntity>>(storageAccount,
+            TableAccessContext = new TableAccessContext<CloudTableEntity<TDomainEntity>>(storageAccount,
                 tableName);
         }
 
@@ -380,20 +381,20 @@
                     switch(batchOperation)
                     {
                         case SaveType.InsertOrReplace:
-                            _tableAccessContext.InsertOrReplace(entitiesArray);
+                            TableAccessContext.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
-                            _tableAccessContext.InsertOrReplace(entitiesArray);
+                            TableAccessContext.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.Insert:
-                            _tableAccessContext.Insert(entitiesArray);
+                            TableAccessContext.Insert(entitiesArray);
                             break;
                         case SaveType.Replace:
-                            _tableAccessContext.Replace(entitiesArray);
+                            TableAccessContext.Replace(entitiesArray);
                             break;
                         case SaveType.Delete:
-                            _tableAccessContext.Delete(entitiesArray);
+                            TableAccessContext.Delete(entitiesArray);
                             break;
                     }
                     //_tableAccessContext.InsertOrReplace(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
@@ -412,20 +413,20 @@
                     switch(batchOperation)
                     {
                         case SaveType.InsertOrReplace:
-                            await _tableAccessContext.InsertOrReplaceAsync(entitiesArray);
+                            await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
-                            await _tableAccessContext.InsertOrReplaceAsync(entitiesArray);
+                            await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
                             break;
                         case SaveType.Insert:
-                            await _tableAccessContext.InsertAsync(entitiesArray);
+                            await TableAccessContext.InsertAsync(entitiesArray);
                             break;
                         case SaveType.Replace:
-                            await _tableAccessContext.ReplaceAsync(entitiesArray);
+                            await TableAccessContext.ReplaceAsync(entitiesArray);
                             break;
                         case SaveType.Delete:
-                            await _tableAccessContext.DeleteAsync(entitiesArray);
+                            await TableAccessContext.DeleteAsync(entitiesArray);
                             break;
                     }
                     // await _tableAccessContext.InsertOrReplaceAsync(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
@@ -457,16 +458,21 @@
         }
 
         /// <summary>
-        /// Asynchronously writes the domain entity to the Table based on the kind of Table Operation specified in the SaveType enum.
+        ///     Asynchronously writes the domain entity to the Table based on the kind of Table Operation specified in the SaveType
+        ///     enum.
         /// </summary>
         /// <param name="domainEntity"></param>
         /// <param name="typeOfSave"></param>
         /// <returns></returns>
-        public async Task SaveAsync(TDomainEntity domainEntity, SaveType typeOfSave) { await ExecuteTableOperationAsync(domainEntity, typeOfSave); }
+        public async Task SaveAsync(TDomainEntity domainEntity, SaveType typeOfSave)
+        {
+            await ExecuteTableOperationAsync(domainEntity, typeOfSave);
+        }
 
         /// <summary>
-        /// Asynchronously writes the domain entities to their respective tables based on the kind of table operation specified by the
-        /// SaveType enum parameter.
+        ///     Asynchronously writes the domain entities to their respective tables based on the kind of table operation specified
+        ///     by the
+        ///     SaveType enum parameter.
         /// </summary>
         /// <param name="domainEntities"></param>
         /// <param name="typeOfSave"></param>
@@ -574,8 +580,8 @@
         /// <returns></returns>
         public IEnumerable<TDomainEntity> GetByDefaultSchema()
         {
-            return _tableAccessContext.GetByPartitionKey(_defaultSchemaName)
-                                      .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
+            return TableAccessContext.GetByPartitionKey(_defaultSchemaName)
+                                     .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
         /// <summary>
@@ -584,7 +590,7 @@
         /// <returns></returns>
         public async Task<List<TDomainEntity>> GetByDefaultSchemaAsync()
         {
-            var partition = await _tableAccessContext.GetByPartitionKeyAsync(_defaultSchemaName);
+            var partition = await TableAccessContext.GetByPartitionKeyAsync(_defaultSchemaName);
             return partition.Select(cte => cte.DomainObjectInstance).ToList();
         }
 
@@ -603,7 +609,7 @@
             if(entityId == null) throw new ArgumentNullException("entityId");
             var serializedEntityId = JsonSerializer.SerializeToString(entityId, entityId.GetType());
             if(partitionKey == null) partitionKey = DefaultSchema.PartitionKey;
-            var tableEntity = _tableAccessContext.Find(partitionKey, serializedEntityId);
+            var tableEntity = TableAccessContext.Find(partitionKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
@@ -622,7 +628,7 @@
             if(entityId == null) return null;
             var serializedEntityId = JsonSerializer.SerializeToString(entityId, entityId.GetType());
             if(partitionKey == null) partitionKey = DefaultSchema.PartitionKey;
-            var tableEntity = await _tableAccessContext.FindAsync(partitionKey, serializedEntityId);
+            var tableEntity = await TableAccessContext.FindAsync(partitionKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
@@ -639,13 +645,13 @@
             if(partitionKey is string)
             {
                 return
-                    _tableAccessContext.GetByPartitionKey(partitionKey as string)
-                                       .Select(tableEntity => tableEntity.DomainObjectInstance);
+                    TableAccessContext.GetByPartitionKey(partitionKey as string)
+                                      .Select(tableEntity => tableEntity.DomainObjectInstance);
             }
             var serializedPartitionKey = JsonSerializer.SerializeToString(partitionKey, partitionKey.GetType());
             return
-                _tableAccessContext.GetByPartitionKey(serializedPartitionKey)
-                                   .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
+                TableAccessContext.GetByPartitionKey(serializedPartitionKey)
+                                  .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
         /// <summary>
@@ -657,11 +663,11 @@
         {
             if(partitionKey is string)
             {
-                var entities = await _tableAccessContext.GetByPartitionKeyAsync(partitionKey as string);
+                var entities = await TableAccessContext.GetByPartitionKeyAsync(partitionKey as string);
                 return entities.Select(tableEntity => tableEntity.DomainObjectInstance).ToList();
             }
             var serializedPartitionKey = JsonSerializer.SerializeToString(partitionKey, partitionKey.GetType());
-            var ents = await _tableAccessContext.GetByPartitionKeyAsync(serializedPartitionKey);
+            var ents = await TableAccessContext.GetByPartitionKeyAsync(serializedPartitionKey);
             return ents.Select(azureTableEntity => azureTableEntity.DomainObjectInstance).ToList();
         }
 
@@ -676,8 +682,8 @@
                                                                            string maxRowKey = "")
         {
             return
-                _tableAccessContext.GetByPartitionKeyWithRowKeyRange(partitionKey, minRowKey, maxRowKey)
-                                   .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
+                TableAccessContext.GetByPartitionKeyWithRowKeyRange(partitionKey, minRowKey, maxRowKey)
+                                  .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
         /// <summary>
@@ -689,7 +695,7 @@
         /// <returns></returns>
         public async Task<List<TDomainEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string partitionKey, string minRowKey = "", string maxRowKey = "")
         {
-            var entites = await _tableAccessContext.GetByPartitionKeyWithRowKeyRangeAsync(partitionKey, minRowKey, maxRowKey);
+            var entites = await TableAccessContext.GetByPartitionKeyWithRowKeyRangeAsync(partitionKey, minRowKey, maxRowKey);
             return entites.Select(ent => ent.DomainObjectInstance).ToList();
         }
 
@@ -713,7 +719,7 @@
             };
             var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty,
                 tempCloudTableEntity.IndexedProperty.GetType());
-            return _tableAccessContext.QueryWherePropertyEquals(partitionKey,
+            return TableAccessContext.QueryWherePropertyEquals(partitionKey,
                 CtConstants.PropNameIndexedProperty, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
@@ -738,7 +744,7 @@
             var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty,
                 tempCloudTableEntity.IndexedProperty.GetType());
             var entities =
-                await _tableAccessContext.QueryWherePropertyEqualsAsync(partitionKey, CtConstants.PropNameIndexedProperty, serializedIndexedProperty);
+                await TableAccessContext.QueryWherePropertyEqualsAsync(partitionKey, CtConstants.PropNameIndexedProperty, serializedIndexedProperty);
             return entities.Select(cte => cte.DomainObjectInstance).ToList();
         }
         #endregion ---- Read Operations ----
