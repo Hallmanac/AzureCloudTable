@@ -1,12 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using AzureCloudTableContext.Api;
-using ServiceStack.Text;
 
 namespace Sample
 {
-    using System;
-    using System.Net;
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Auth;
 
