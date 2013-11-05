@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Diagnostics;
     using System.Linq;
+    using System.Net;
     using ServiceStack.Text;
 
     internal class Program
@@ -15,10 +16,15 @@
             #region First Test
             var adminUser = new List<Admin>();
             Console.WriteLine("Initializing User Repo...");
+            Console.WriteLine("The nagle = {0}", ServicePointManager.UseNagleAlgorithm);
+            Console.WriteLine("The Expect100 status is {0}", ServicePointManager.Expect100Continue);
+
             sw.Start();
             var userRepo = new UserRepository();
             sw.Stop();
             Console.WriteLine("Repo took {0} milliseconds to complete.", sw.ElapsedMilliseconds);
+            Console.WriteLine("The nagle = {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.Expect100Continue);
+            Console.WriteLine("The Expect100 status is {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.UseNagleAlgorithm);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
