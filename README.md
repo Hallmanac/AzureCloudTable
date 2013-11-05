@@ -44,7 +44,7 @@ Basically, with the added concept of "Partition Schemas", the object is getting 
 The best way to see these things in action is via the "Sample" console application that is in a folder of the same name.
 
 =================================
-TableReadWriteContext<TAzureTableEntity> Class
+TableAccessContext <TAzureTableEntity> Class
 =================================
 This class is used at a deeper level of the API and isn't necessarily used "out of the box". None the less...
 
