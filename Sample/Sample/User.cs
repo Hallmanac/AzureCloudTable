@@ -23,12 +23,12 @@ namespace Sample
 
     public class Admin : User
     {
-        public string Employee { get; set; }
+        public string NameOfEmployeeMinion { get; set; }
     }
 
     public class Standard : User
     {
-        public string Manager { get; set; }
+        public string NameOfManager { get; set; }
     }
     
 }
