@@ -12,21 +12,21 @@
         private static void Main(string[] args)
         {
             var sw = new Stopwatch();
+            var listOfUsers = new List<User>();
 
             #region First Test
             var adminUser = new List<Admin>();
             Console.WriteLine("Initializing User Repo...");
-            Console.WriteLine("The nagle = {0}", ServicePointManager.UseNagleAlgorithm);
-            Console.WriteLine("The Expect100 status is {0}", ServicePointManager.Expect100Continue);
             sw.Start();
             var userRepo = new UserRepository();
             sw.Stop();
-            Console.WriteLine("Repo took {0} milliseconds to complete.", sw.ElapsedMilliseconds);
+            Console.WriteLine("Repo took {0} milliseconds to complete.\n", sw.ElapsedMilliseconds);
             Console.WriteLine("The nagle = {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.Expect100Continue);
             Console.WriteLine("The Expect100 status is {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.UseNagleAlgorithm);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
+            Console.WriteLine("\nGetting All Users...");
             sw.Start();
             var existingUsers = userRepo.GetAllUsers().ToList();
             sw.Stop();
@@ -37,65 +37,62 @@
             Console.ReadLine();
             if(existingUsers.Count < 1)
             {
+                sw.Start();
                 #region Initialize Users
-                var user1 = new Admin
+                for(int i = 0; i < 40000; i++)
                 {
-                    UserId = Guid.NewGuid(),
-                    FirstName = "Brian",
-                    LastName = "Hall",
-                    EmailAddress = "Brian@Hallmanac.com",
-                    UserAddress = new Address
+                    if(i % 6 == 0)
                     {
-                        StreetNumber = 1234,
-                        StreetName = "Anywhere ST",
-                        City = "Orlando",
-                        State = "FL",
-                        ZipCode = 55555
-                    },
-                    Employee = "Jennifer"
-                };
-                var user2 = new Admin
-                {
-                    UserId = Guid.NewGuid(),
-                    FirstName = "Jennifer",
-                    LastName = "Adamchek",
-                    EmailAddress = "Jenn@somedomain.com",
-                    UserAddress = new Address
+                        var adminUsr = new Admin();
+                        adminUsr.UserId = Guid.NewGuid();
+                        adminUsr.FirstName = "Brian";
+                        adminUsr.LastName = "Hall";
+                        adminUsr.EmailAddress = "Brian@Hallmanac.com";
+                        adminUsr.UserAddress = new Address
+                        {
+                            StreetNumber = 1234,
+                            StreetName = "Anywhere ST",
+                            City = "Orlando",
+                            State = "FL",
+                            ZipCode = 55555
+                        };
+                        adminUsr.NameOfEmployeeMinion = "Jennifer";
+                        listOfUsers.Add(adminUsr);
+                    }
+                    else
                     {
-                        StreetNumber = 4322,
-                        StreetName = "Elm ST",
-                        City = "Houston",
-                        State = "TX",
-                        ZipCode = 22222
-                    },
-                    Employee = "Brian"
-                };
-                var user3 = new Standard
-                {
-                    UserId = Guid.NewGuid(),
-                    FirstName = "Daryl",
-                    LastName = "Smith",
-                    EmailAddress = "Daryl@someotherdomain.com",
-                    UserAddress = new Address
-                    {
-                        StreetNumber = 9068,
-                        StreetName = "Pine RD",
-                        City = "Seattle",
-                        State = "WA",
-                        ZipCode = 99888
-                    },
-                    Manager = "Brian"
-                };
+                        var stdUsr = new Standard
+                        {
+                            UserId = Guid.NewGuid(),
+                            FirstName = "Daryl",
+                            LastName = "Smith",
+                            EmailAddress = "Daryl@someotherdomain.com",
+                            UserAddress = new Address
+                            {
+                                StreetNumber = 9068,
+                                StreetName = "Pine RD",
+                                City = "Seattle",
+                                State = "WA",
+                                ZipCode = 99888
+                            },
+                            NameOfManager = "Brian"
+                        };
+                        listOfUsers.Add(stdUsr);
+                    }
+                    sw.Stop();
+                }
+
                 #endregion --Initialize Users--
 
+                Console.WriteLine("\nUsers created in {0} milliseconds.", sw.ElapsedMilliseconds);
                 Console.WriteLine("Press enter to see info for User 1.");
                 Console.ReadLine();
-                Console.WriteLine("User 1 is: \n{0}", user1.SerializeAndFormat());
+                Console.WriteLine("User 1 is: \n{0}", listOfUsers[0].SerializeAndFormat());
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
                 Console.WriteLine("Saving Users...");
                 sw.Start();
-                userRepo.Save(user1);
+                userRepo.Save(listOfUsers.ToArray());
                 sw.Stop();
                 Console.WriteLine("Users saved in {0} milliseconds.", sw.ElapsedMilliseconds);
                 sw.Reset();
@@ -105,53 +102,40 @@
                 sw.Start();
                 var allUsersGotten = userRepo.GetAllUsers().ToList();
                 sw.Stop();
-                foreach(var user in allUsersGotten)
+                /*foreach(var user in allUsersGotten)
                 {
                     var userItem = string.Format("{0}", JsonSerializer.SerializeToString(user, user.GetType()));
                     Console.WriteLine("{0}", userItem.SerializeAndFormat());
-                    /*Console.WriteLine("{0}", JsonSerializer.SerializeToString(user, user.GetType()));*/
-                }
-                /*Console.WriteLine("All Users:\n{0}", allUsersGotten.SerializeAndFormat());*/
+                }*/
+                Console.WriteLine("Number of users retrieved is {0}\n", allUsersGotten.Count);
                 Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
-                sw.Reset();
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadLine();
-                var userList = new List<User>
-                {
-                    user2,
-                    user3
-                };
-                Console.WriteLine("Saving the rest of the users...");
-                sw.Start();
-                userRepo.Save(userList.ToArray());
-                sw.Stop();
-                Console.WriteLine("Users List Saved in {0} milliseconds.", sw.ElapsedMilliseconds);
                 sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
             }
             else
             {
-                foreach(var existingUser in existingUsers)
+                /*foreach(var existingUser in existingUsers)
                 {
                     Console.WriteLine("{0}", JsonSerializer.SerializeToString(existingUser, existingUser.GetType()));
-                }
-                /*Console.WriteLine("All Users:\n{0}", existingUsers.SerializeAndFormat());*/
-                Console.WriteLine("All Users listed above.");
-                Console.WriteLine("Press any key to continue...");
-                Console.ReadLine();
+                }*/
+                /*Console.WriteLine("All Users listed above.");*/
+                
                 Console.WriteLine("Changing State property on users (except those in FL)...");
                 sw.Start();
+                var counter = 0;
                 foreach(var user in existingUsers)
                 {
                     if(user.UserAddress.State == "FL") continue;
                     user.UserAddress.State = "NY";
                     user.Version++;
+                    counter++;
                 }
                 userRepo.Save(existingUsers.ToArray());
                 sw.Stop();
                 Console.WriteLine("State property changed.");
-                Console.WriteLine("Time take was {0} milliseconds.", sw.ElapsedMilliseconds);
+                Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+                Console.WriteLine("\nThere were {0} users changed.", counter);
                 sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
@@ -159,24 +143,28 @@
                 sw.Start();
                 var usersWithFirstNameBrian = userRepo.GetUsersByFirstName("Brian").ToList();
                 sw.Stop();
-                Console.WriteLine("List of Users with First Name of Brian:\n{0}", usersWithFirstNameBrian.SerializeAndFormat());
+                //Console.WriteLine("List of Users with First Name of Brian:\n{0}", usersWithFirstNameBrian.SerializeAndFormat());
                 Console.WriteLine("\nTime taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+                Console.WriteLine("Number of Users = {0}", usersWithFirstNameBrian.Count);
                 sw.Reset();
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
             }
-            Console.WriteLine("Gettin all Admin user types...");
+            Console.WriteLine("Getting all Admin user types...");
             sw.Start();
-            foreach(var user in userRepo.GetAllUsers())
+            /*foreach(var user in userRepo.GetAllUsers())
             {
                 if(user.GetType().Name == "Admin")
                 {
                     adminUser.Add((Admin)user);
                 }
-            }
+            }*/
+            var retrievedAdmins = userRepo.GetUsersByTypeOfUser("Admin");
+            adminUser.AddRange(retrievedAdmins.ConvertAll(usr => (Admin)usr));
             sw.Stop();
-            Console.WriteLine("List of Admin users: \n{0}", adminUser.SerializeAndFormat());
+            //Console.WriteLine("List of Admin users: \n{0}", adminUser.SerializeAndFormat());
             Console.WriteLine("\nTime taken was {0} milliseconds.", sw.ElapsedMilliseconds);
+            Console.WriteLine("\nThere were {0} users retrieved.", adminUser.Count);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
@@ -186,13 +174,14 @@
             sw.Stop();
             if(usersInFlorida.Count > 0)
             {
-                Console.WriteLine("Users in Florida:\n{0}", usersInFlorida.SerializeAndFormat());
+                //Console.WriteLine("Users in Florida:\n{0}", usersInFlorida.SerializeAndFormat());
             }
             else
             {
                 Console.WriteLine("No Users live in Florida.");
             }
             Console.WriteLine("Operation took {0} milliseconds.", sw.ElapsedMilliseconds);
+            Console.WriteLine("\nThere were {0} users that live in Florida.", usersInFlorida.Count);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
@@ -200,12 +189,15 @@
             sw.Start();
             var jenniferUser = userRepo.GetUsersByFirstName("Jennifer");
             var listOfJenniferVersions = new List<Admin>();
-            foreach(var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
+            if(jenniferUser != null && jenniferUser.Any())
             {
-                listOfJenniferVersions.Add((Admin)userVersion);
+                foreach (var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
+                {
+                    listOfJenniferVersions.Add((Admin)userVersion);
+                }
             }
             sw.Stop();
-            Console.WriteLine("All Versions of AdminUser...\n{0}", listOfJenniferVersions.SerializeAndFormat());
+            Console.WriteLine("All Versions of Jenfer Admin...\n{0}", listOfJenniferVersions.SerializeAndFormat());
             Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
