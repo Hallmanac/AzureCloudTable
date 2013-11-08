@@ -9,9 +9,9 @@ namespace Sample
 
     public class UserRepository
     {
-        private readonly string _accountKey = "YourAccountKey";
+        private const string AccountKey = "YourAccountKey";
 
-        private readonly string _accountName = "YourAccountName";
+        private const string AccountName = "YourAccountName";
 
         /*This is used as a dummy object to give access to the property names of a User type.
          *If the User class was static, then there would be no need for this.
@@ -29,11 +29,11 @@ namespace Sample
 
         public UserRepository()
         {
-            var storageCredentials = new StorageCredentials(_accountName, _accountKey);
+            var storageCredentials = new StorageCredentials(AccountName, AccountKey);
             var storageAccount = new CloudStorageAccount(storageCredentials, true);
-            UserContext = new CloudTableContext<User>(storageAccount,
-                this.GetPropertyName(() => _tempUserInstance.UserId));
-            
+            UserContext = new CloudTableContext<User>(storageAccount, "UserId");
+            // UserContext.UseBackgroundTaskForIndexing = false;
+
             InitPartitionSchemas();
         }
 
@@ -50,48 +50,44 @@ namespace Sample
         private void InitPartitionSchemas()
         {
             _usersInFloridaPartitionSchema = UserContext.CreatePartitionSchema()
-                .SetPartitionKey("UsersInFlorida")
-                .SetSchemaCriteria(user => user.UserAddress.State == "FL")
+                                                        .SetPartitionKey("UsersInFlorida")
+                                                        .SetSchemaCriteria(user => user.UserAddress.State == "FL")
                 /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
-                .SetIndexedPropertyCriteria(user => user.UserAddress.State);
-                
+                                                        .SetIndexedPropertyCriteria(user => user.UserAddress.State);
+
             _firstNamePartitionSchema = UserContext.CreatePartitionSchema()
-                .SetPartitionKey("FirstName")
-                .SetSchemaCriteria(user => true)
+                                                   .SetPartitionKey("FirstName")
+                                                   .SetSchemaCriteria(user => true)
                 /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
-                .SetIndexedPropertyCriteria(user => user.FirstName);
+                                                   .SetIndexedPropertyCriteria(user => user.FirstName);
 
             _userTypePartitionSchema = UserContext.CreatePartitionSchema()
-                .SetPartitionKey("UserTypePartition")
-                .SetSchemaCriteria(user => true)
+                                                  .SetPartitionKey("UserTypePartition")
+                                                  .SetSchemaCriteria(user => true)
                 /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
-                .SetIndexedPropertyCriteria(user => user.GetType().Name);
+                                                  .SetIndexedPropertyCriteria(user => user.GetType().Name);
 
             _userVersionPartitionSchema = UserContext.CreatePartitionSchema()
-                .SetPartitionKey("UserVersionPartition")
-                .SetSchemaCriteria(user => true)
-                .SetRowKeyCriteria(user => UserContext.GetChronologicalBasedRowKey())/*In this case we're keeping a version log so we want a new 
+                                                     .SetPartitionKey("UserVersionPartition")
+                                                     .SetSchemaCriteria(user => true)
+                                                     .SetRowKeyCriteria(user => UserContext.GetChronologicalBasedRowKey())
+                /*In this case we're keeping a version log so we want a new 
                                                                                        RowKey created upon each write to the Table*/
-                .SetIndexedPropertyCriteria(user => user.UserId);
-                
+                                                     .SetIndexedPropertyCriteria(user => user.UserId);
+
             // Now add the schemas that were just created to the CloudTableContext<User> instance (i.e. _userContext).
             UserContext.AddMultiplePartitionSchemas(new List<PartitionSchema<User>>
-                {
-                    _usersInFloridaPartitionSchema,
-                    _firstNamePartitionSchema,
-                    _userTypePartitionSchema,
-                    _userVersionPartitionSchema
-                });
+            {
+                _usersInFloridaPartitionSchema,
+                _firstNamePartitionSchema,
+                _userTypePartitionSchema,
+                _userVersionPartitionSchema
+            });
         }
 
-        public IEnumerable<User> GetAllUsers()
+        public List<User> GetAllUsers()
         {
-            foreach(var obj in UserContext.GetByDefaultSchema())
-            {
-                var objInstance = (User)obj;
-                yield return objInstance;
-            }
-            /*return _userContext.GetByDefaultSchema();*/
+            return UserContext.GetByDefaultSchema().ToList();
         }
 
         public void Save(User user)
@@ -106,9 +102,9 @@ namespace Sample
             UserContext.InsertOrReplace(users);
         }
 
-        public IEnumerable<User> GetUsersThatLiveInFlorida()
+        public List<User> GetUsersThatLiveInFlorida()
         {
-            return UserContext.GetByPartitionKey(_usersInFloridaPartitionSchema.PartitionKey);
+            return UserContext.GetByPartitionKey(_usersInFloridaPartitionSchema.PartitionKey).ToList();
         }
 
         public IEnumerable<User> GetUsersByFirstName(string firstName)
@@ -116,7 +112,12 @@ namespace Sample
             return UserContext.GetByIndexedProperty(_firstNamePartitionSchema.PartitionKey, firstName).ToList();
         }
 
-        public IEnumerable<User> GetAllVersions(User givenUser)
+        public List<User> GetUsersByTypeOfUser(string userType)
+        {
+            return UserContext.GetByIndexedProperty(_userTypePartitionSchema.PartitionKey, userType).ToList();
+        }
+
+    public IEnumerable<User> GetAllVersions(User givenUser)
         {
             return UserContext.GetByIndexedProperty(_userVersionPartitionSchema.PartitionKey, _userVersionPartitionSchema.GetIndexedPropertyFromCriteria(givenUser));
         }
