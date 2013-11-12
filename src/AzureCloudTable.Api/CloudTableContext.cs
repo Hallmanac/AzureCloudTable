@@ -376,12 +376,12 @@
 
         private void WritePartitionSchemasToTable(SaveType batchOperation)
         {
-            PartitionSchemas.ForEach(schema =>
+            Parallel.ForEach(PartitionSchemas, schema =>
             {
-                if(schema.CloudTableEntities.Count > 0)
+                if (schema.CloudTableEntities.Count > 0)
                 {
                     var entitiesArray = schema.CloudTableEntities.ToArray();
-                    switch(batchOperation)
+                    switch (batchOperation)
                     {
                         case SaveType.InsertOrReplace:
                             TableAccessContext.InsertOrReplace(entitiesArray);
