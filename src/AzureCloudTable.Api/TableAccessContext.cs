@@ -42,6 +42,12 @@
 
         public ServicePoint TableServicePoint { get; set; }
 
+        /// <summary>
+        /// When set to true, this enables the use of background threads (via Task.Factory.StartNew()) to run the indexing on saves which will allow for much faster
+        /// save times. This defaults to true.
+        /// </summary>
+        public bool UseBackgroundTaskForIndexing { get; set; }
+
         #region ---Writes---
         /// <summary>
         ///     Executes a single table operation of the same name.
@@ -793,6 +799,7 @@
             TableServicePoint.UseNagleAlgorithm = false;
             TableServicePoint.Expect100Continue = false;
             TableServicePoint.ConnectionLimit = 1000;
+            UseBackgroundTaskForIndexing = true;
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
