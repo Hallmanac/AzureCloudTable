@@ -408,12 +408,12 @@
 
         private async Task WritePartitionSchemasToTableAsync(SaveType batchOperation)
         {
-            foreach(var schema in PartitionSchemas)
+            Parallel.ForEach(PartitionSchemas, async schema =>
             {
-                if(schema.CloudTableEntities.Count > 0)
+                if (schema.CloudTableEntities.Count > 0)
                 {
                     var entitiesArray = schema.CloudTableEntities.ToArray();
-                    switch(batchOperation)
+                    switch (batchOperation)
                     {
                         case SaveType.InsertOrReplace:
                             await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
@@ -435,7 +435,7 @@
                     // await _tableAccessContext.InsertOrReplaceAsync(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
                 }
                 schema.CloudTableEntities.Clear();
-            }
+            });
         }
 
         #region ---- Write Operations ----
