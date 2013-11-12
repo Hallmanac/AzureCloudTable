@@ -792,6 +792,7 @@
             TableServicePoint = ServicePointManager.FindServicePoint(_storageAccount.TableEndpoint);
             TableServicePoint.UseNagleAlgorithm = false;
             TableServicePoint.Expect100Continue = false;
+            TableServicePoint.ConnectionLimit = 1000;
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
