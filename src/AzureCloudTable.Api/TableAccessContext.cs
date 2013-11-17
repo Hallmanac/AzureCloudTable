@@ -799,7 +799,7 @@
             TableServicePoint.UseNagleAlgorithm = false;
             TableServicePoint.Expect100Continue = false;
             TableServicePoint.ConnectionLimit = 1000;
-            UseBackgroundTaskForIndexing = true;
+            UseBackgroundTaskForIndexing = false;
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
