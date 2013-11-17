@@ -39,7 +39,7 @@
             {
                 sw.Start();
                 #region Initialize Users
-                for(int i = 0; i < 40000; i++)
+                for(int i = 0; i < 500; i++)
                 {
                     if(i % 6 == 0)
                     {
