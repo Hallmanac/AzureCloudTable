@@ -400,7 +400,6 @@
                             TableAccessContext.Delete(entitiesArray);
                             break;
                     }
-                    //_tableAccessContext.InsertOrReplace(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
                 }
                 schema.CloudTableEntities.Clear();
             });
@@ -432,7 +431,6 @@
                             await TableAccessContext.DeleteAsync(entitiesArray);
                             break;
                     }
-                    // await _tableAccessContext.InsertOrReplaceAsync(entitiesArray); --> not sure why this was here. Leaving it commented in case there was a valid reason.
                 }
                 schema.CloudTableEntities.Clear();
             }));
