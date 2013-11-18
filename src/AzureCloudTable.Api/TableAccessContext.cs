@@ -289,11 +289,11 @@
                 });
             }
             // Iterating through the batch key-value pairs and executing the batch
-            foreach(var pair in batchPartitionPairs)
+            Parallel.ForEach(batchPartitionPairs, pair =>
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
                 entityBatch.BatchList.ForEach(batchOp => _table.ExecuteBatch(batchOp));
-            }
+            });
         }
 
         private async Task ExecuteBatchOperationAsync(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
@@ -318,12 +318,12 @@
                 });
             }
             // Iterating through the batch key-value pairs and executing the batch one partition at a time.
-            foreach(var pair in batchPartitionPairs)
+            await Task.Run(() => Parallel.ForEach(batchPartitionPairs, async pair =>
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
                 var batchTasks = entityBatch.BatchList.Select(batchOp => _table.ExecuteBatchAsync(batchOp));
                 await Task.WhenAll(batchTasks);
-            }
+            }));
         }
         #endregion Writes
 
