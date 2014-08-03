@@ -1,6 +1,6 @@
 Update (2014-08-03)
 ===================
-Okay, I just came back to this after 9 months and, wow, is this ever one of those "what were you thinking" moments of looking over old code you wrote. I will definitely be coming back to this in the future when I have a bit more time to refactor this into something a bit more usable. In the meantime, for those brave souls...
+Okay, I just came back to this after 9 months and, wow, is this ever one of those "what were you thinking" moments of trying to be a consumer of an API you wrote. I will definitely be coming back to this in the future when I have a bit more time to refactor this into something a bit more usable. In the meantime, for those brave souls...
 
 *To use the beta version through Nuget, type the following in the Package Manager Console:*
 
