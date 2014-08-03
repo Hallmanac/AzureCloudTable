@@ -1,12 +1,12 @@
-﻿namespace AzureCloudTableContext.Api
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Text;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Table;
-    using ServiceStack.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
 
+namespace AzureCloudTableContext.Api
+{
     /// <summary>
     ///     Wraps a POCO so that it can be stored directly into Azure Table Storage.
     /// </summary>
@@ -60,8 +60,7 @@
             EntityProperty domainObjType;
             if(properties.TryGetValue(CtConstants.PropNameIndexedProperty, out indexedEntityProperty))
             {
-                var serializer = new JsonSerializer<IndexedObject>();
-                IndexedProperty = serializer.DeserializeFromString(indexedEntityProperty.StringValue);
+                IndexedProperty = JsonConvert.DeserializeObject<IndexedObject>(indexedEntityProperty.StringValue);
             }
             if(properties.TryGetValue(CtConstants.PropNameDomainObjectType, out domainObjType))
             {
@@ -73,10 +72,13 @@
         public IDictionary<string, EntityProperty> WriteEntity(OperationContext operationContext)
         {
             var entityDictionary = WriteFatEntity(DomainObjectInstance);
-            if(IndexedProperty == null) IndexedProperty = new IndexedObject();
+            if(IndexedProperty == null)
+            {
+                IndexedProperty = new IndexedObject();
+            }
             DomainObjectType = GetAssemblyQualifiedName();
             entityDictionary.Add(CtConstants.PropNameDomainObjectType, new EntityProperty(DomainObjectType));
-            var complexTypeSerialized = JsonSerializer.SerializeToString(IndexedProperty, IndexedProperty.GetType());
+            var complexTypeSerialized = JsonConvert.SerializeObject(IndexedProperty);
             if((complexTypeSerialized.Length > 63997))
             {
                 var truncatedType = complexTypeSerialized.Substring(0, 63999);
@@ -100,7 +102,7 @@
         {
             var defaultRowKeyByTime = string.Format("{0:d19}",
                 (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks));
-            return defaultRowKeyByTime + "_" + Guid.NewGuid().SerializeToString();
+            return defaultRowKeyByTime + "_" + JsonConvert.SerializeObject(Guid.NewGuid());
         }
 
         /// <summary>
@@ -132,12 +134,17 @@
             var combinedFatEntity = new StringBuilder();
             foreach(var entityProperty in entityProperties)
             {
-                if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == CtConstants.PropNameIndexedProperty || entityProperty.Key == CtConstants.PropNameDomainObjectType ||
-                   entityProperty.Value.PropertyType != EdmType.String) continue;
+                if(IsNativeTableProperty(entityProperty.Key) || entityProperty.Key == CtConstants.PropNameIndexedProperty ||
+                   entityProperty.Key == CtConstants.PropNameDomainObjectType ||
+                   entityProperty.Value.PropertyType != EdmType.String)
+                {
+                    continue;
+                }
                 combinedFatEntity.Append(entityProperty.Value.StringValue);
             }
             var fatEntityString = combinedFatEntity.ToString();
-            var transitionObject = (TDomainObject)JsonSerializer.DeserializeFromString(fatEntityString, Type.GetType(DomainObjectType));
+            var transitionObject = JsonConvert.DeserializeObject<TDomainObject>(fatEntityString);
+            //var transitionObject = (TDomainObject)JsonSerializer.DeserializeFromString(fatEntityString, Type.GetType(DomainObjectType));
             DomainObjectInstance = transitionObject;
             if(DomainObjectInstance == null)
             {
@@ -145,10 +152,10 @@
             }
         }
 
-        private IDictionary<string, EntityProperty> WriteFatEntity(TDomainObject givenObject)
+        private static IDictionary<string, EntityProperty> WriteFatEntity(TDomainObject givenObject)
         {
             var fatEntityDictionary = new Dictionary<string, EntityProperty>();
-            var serializedObject = JsonSerializer.SerializeToString(givenObject, givenObject.GetType());
+            var serializedObject = JsonConvert.SerializeObject(givenObject);
             var maxStringBlockSize = 63997; //This is a "just in case". I found that when an object is serialized to a UTF-8 encoded 
             //string and is saved to a txt file it eats up an additional 3 Bytes. Probably over thinking
             //this but hey, that's how I roll.
@@ -156,7 +163,10 @@
             var dictionaryCount = fatEntityDictionary.Count;
             for(var i = 0; i < stringLength; i += maxStringBlockSize)
             {
-                if((i + maxStringBlockSize) > stringLength) maxStringBlockSize = (stringLength - i);
+                if((i + maxStringBlockSize) > stringLength)
+                {
+                    maxStringBlockSize = (stringLength - i);
+                }
                 var entityValue = serializedObject.Substring(i, maxStringBlockSize);
                 var entityKey = string.Format("E{0:D2}", (dictionaryCount + 1));
                 if(fatEntityDictionary.Count < 14)
@@ -173,7 +183,7 @@
             return fatEntityDictionary;
         }
 
-        private bool IsNativeTableProperty(string propertyName)
+        private static bool IsNativeTableProperty(string propertyName)
         {
             return (propertyName == CtConstants.PropNamePartitionKey || propertyName == CtConstants.PropNameRowKey ||
                     (propertyName == CtConstants.PropNameTimeStamp || propertyName == CtConstants.PropNameEtag));
@@ -195,6 +205,4 @@
         /// </summary>
         public object GivenObject { get; private set; }
     }
-
-    
 }

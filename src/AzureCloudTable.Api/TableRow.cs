@@ -1,9 +1,8 @@
-﻿using System;
+﻿/*using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
-using ServiceStack.Text;
 
 namespace AzureCloudTableContext.Api
 {
@@ -450,4 +449,4 @@ namespace AzureCloudTableContext.Api
 
         public string Entity { get; private set; }
     }
-}
+}*/

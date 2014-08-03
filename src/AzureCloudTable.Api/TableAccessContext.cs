@@ -1,4 +1,6 @@
-﻿namespace AzureCloudTableContext.Api
+﻿using Newtonsoft.Json;
+
+namespace AzureCloudTableContext.Api
 {
     using System;
     using System.Collections.Concurrent;
@@ -10,7 +12,6 @@
     using Microsoft.WindowsAzure.Storage;
     using Microsoft.WindowsAzure.Storage.Table;
     using Microsoft.WindowsAzure.Storage.Table.Queryable;
-    using ServiceStack.Text;
 
     /// <summary>
     ///     Class that provides direct interaction to the current Azure Table through commonly used techniques.
@@ -894,7 +895,7 @@
             public EntityBatchPair(TAzureTableEntity entity)
             {
                 TableEntity = entity;
-                SerializedEntity = JsonSerializer.SerializeToString(entity);
+                SerializedEntity = JsonConvert.SerializeObject(entity);
                 EntityByteSize = Encoding.UTF8.GetByteCount(SerializedEntity);
                 IsInBatch = false;
             }

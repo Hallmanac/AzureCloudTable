@@ -1,13 +1,13 @@
-﻿namespace AzureCloudTableContext.Api
-{
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Threading.Tasks;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Table;
-    using ServiceStack.Text;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
+using Newtonsoft.Json;
 
+namespace AzureCloudTableContext.Api
+{
     /// <summary>
     ///     Class used to wrap a domain entity for use with Azure Table Storage via using PartitionKey strategies (known as
     ///     PartitionSchemas)
@@ -40,6 +40,9 @@
             Init(storageAccount, nameOfEntityIdProperty, tableName);
         }
 
+        /// <summary>
+        /// Gives direct access to the underlying TableAccessContext class that does the interaction with the Azure Table.
+        /// </summary>
         public TableAccessContext<CloudTableEntity<TDomainEntity>> TableAccessContext { get; private set; }
 
         /// <summary>
@@ -110,7 +113,10 @@
         {
             foreach(var partitionSchema in partitionSchemas)
             {
-                if(PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) continue;
+                if(PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey))
+                {
+                    continue;
+                }
                 PartitionSchemas.Add(partitionSchema);
             }
         }
@@ -121,7 +127,10 @@
         /// <param name="partitionSchema"></param>
         public void AddPartitionSchema(PartitionSchema<TDomainEntity> partitionSchema)
         {
-            if(PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey)) return;
+            if(PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey))
+            {
+                return;
+            }
             PartitionSchemas.Add(partitionSchema);
         }
 
@@ -131,7 +140,7 @@
         /// <returns></returns>
         public string GetChronologicalBasedRowKey()
         {
-            return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), Guid.NewGuid().ToJsv());
+            return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), JsonConvert.SerializeObject(Guid.NewGuid()));
         }
 
         /// <summary>
@@ -176,15 +185,27 @@
                 var metaDataPkIsInList = false;
                 foreach(var partitionKeyString in _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys)
                 {
-                    if(partitionKeyString == CtConstants.TableMetaDataPartitionKey) metaDataPkIsInList = true;
+                    if(partitionKeyString == CtConstants.TableMetaDataPartitionKey)
+                    {
+                        metaDataPkIsInList = true;
+                    }
                     var isInList = false;
                     foreach(var item in PartitionKeysInTable)
                     {
-                        if(item == partitionKeyString) isInList = true;
+                        if(item == partitionKeyString)
+                        {
+                            isInList = true;
+                        }
                     }
-                    if(!isInList) PartitionKeysInTable.Add(partitionKeyString);
+                    if(!isInList)
+                    {
+                        PartitionKeysInTable.Add(partitionKeyString);
+                    }
                 }
-                if(!metaDataPkIsInList) PartitionKeysInTable.Add(CtConstants.TableMetaDataPartitionKey);
+                if(!metaDataPkIsInList)
+                {
+                    PartitionKeysInTable.Add(CtConstants.TableMetaDataPartitionKey);
+                }
                 // The RowKey for the DefaultSchema is set by the given ID property of the TDomainEntity object
                 DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
                     .SetSchemaCriteria(entity => true)
@@ -212,8 +233,10 @@
             {
                 if(partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
                 {
-                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance);
-                    tempTableEntity.PartitionKey = partitionSchema.PartitionKey;
+                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
+                    {
+                        PartitionKey = partitionSchema.PartitionKey
+                    };
                     // Checks if the current partition key has been registered with the list of partition keys for the table
                     if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
                                                .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
@@ -239,8 +262,10 @@
             {
                 if(partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
                 {
-                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance);
-                    tempTableEntity.PartitionKey = partitionSchema.PartitionKey;
+                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
+                    {
+                        PartitionKey = partitionSchema.PartitionKey
+                    };
                     // Checks if the current partition key has been registered with the list of partition keys for the table
                     if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
                                                .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
@@ -283,12 +308,11 @@
         {
             await VerifyAllPartitionsExistAsync();
             await RunTableIndexingAsync();
-            foreach(var domainEntity in domainEntities)
+            foreach(var tempTableEntity in domainEntities.Select(domainEntity => new CloudTableEntity<TDomainEntity>
             {
-                var tempTableEntity = new CloudTableEntity<TDomainEntity>
-                {
-                    DomainObjectInstance = domainEntity
-                };
+                DomainObjectInstance = domainEntity
+            }))
+            {
                 await ValidateTableEntityAgainstPartitionSchemasAsync(tempTableEntity);
             }
             WritePartitionSchemasToTable(batchOperation);
@@ -327,12 +351,18 @@
                 if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
                 {
                     _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
-                    if(!PartitionKeysInTable.Contains(schema.PartitionKey)) PartitionKeysInTable.Add(schema.PartitionKey);
+                    if(!PartitionKeysInTable.Contains(schema.PartitionKey))
+                    {
+                        PartitionKeysInTable.Add(schema.PartitionKey);
+                    }
                     shouldWriteToTable = true;
                     _needToRunTableIndices = true;
                 }
             });
-            if(shouldWriteToTable) _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
+            if(shouldWriteToTable)
+            {
+                _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
+            }
         }
 
         private async Task VerifyAllPartitionsExistAsync()
@@ -344,17 +374,26 @@
                 if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
                 {
                     _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
-                    if(!PartitionKeysInTable.Contains(schema.PartitionKey)) PartitionKeysInTable.Add(schema.PartitionKey);
+                    if(!PartitionKeysInTable.Contains(schema.PartitionKey))
+                    {
+                        PartitionKeysInTable.Add(schema.PartitionKey);
+                    }
                     shouldWriteToTable = true;
                     _needToRunTableIndices = true;
                 }
             });
-            if(shouldWriteToTable) await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntity);
+            if(shouldWriteToTable)
+            {
+                await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntity);
+            }
         }
 
         private void RunTableIndexing()
         {
-            if(!_needToRunTableIndices) return;
+            if(!_needToRunTableIndices)
+            {
+                return;
+            }
             var defaultPartitionEntities = GetByDefaultSchema().ToList();
             _needToRunTableIndices = false;
             if(defaultPartitionEntities.Count > 1)
@@ -365,7 +404,10 @@
 
         private async Task RunTableIndexingAsync()
         {
-            if(!_needToRunTableIndices) return;
+            if(!_needToRunTableIndices)
+            {
+                return;
+            }
             var defaultPartitionEntities = await GetByDefaultSchemaAsync();
             _needToRunTableIndices = false;
             if(defaultPartitionEntities.Count > 1)
@@ -378,10 +420,10 @@
         {
             Parallel.ForEach(PartitionSchemas, schema =>
             {
-                if (schema.CloudTableEntities.Count > 0)
+                if(schema.CloudTableEntities.Count > 0)
                 {
                     var entitiesArray = schema.CloudTableEntities.ToArray();
-                    switch (batchOperation)
+                    switch(batchOperation)
                     {
                         case SaveType.InsertOrReplace:
                             TableAccessContext.InsertOrReplace(entitiesArray);
@@ -502,6 +544,16 @@
         }
 
         /// <summary>
+        /// Runs an InsertOrMerge table operation on the given entities asynchronously
+        /// </summary>
+        /// <param name="domainEntities"></param>
+        /// <returns></returns>
+        public async Task InsertOrMergeAsync(TDomainEntity[] domainEntities)
+        {
+            await ExecuteTableOperationAsync(domainEntities, SaveType.InsertOrMerge).ConfigureAwait(false);
+        }
+
+        /// <summary>
         ///     Executes a single "InsertOrReplace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
@@ -517,6 +569,16 @@
         public void InsertOrReplace(TDomainEntity[] domainEntities)
         {
             ExecuteTableOperation(domainEntities, SaveType.InsertOrReplace);
+        }
+
+        /// <summary>
+        /// Runs an InsertOrReplace table operation asynchrounously.
+        /// </summary>
+        /// <param name="domainEntities"></param>
+        /// <returns></returns>
+        public async Task InsertOrReplaceAsync(TDomainEntity[] domainEntities)
+        {
+            await ExecuteTableOperationAsync(domainEntities, SaveType.InsertOrReplace).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -553,6 +615,16 @@
         public void Delete(TDomainEntity[] domainEntities)
         {
             ExecuteTableOperation(domainEntities, SaveType.Delete);
+        }
+
+        /// <summary>
+        /// Deletes entities in a table asynchronously
+        /// </summary>
+        /// <param name="domainEntities"></param>
+        /// <returns></returns>
+        public async Task DeleteAsync(TDomainEntity[] domainEntities)
+        {
+            await ExecuteTableOperationAsync(domainEntities, SaveType.Delete).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -605,11 +677,17 @@
         /// <param name="entityId"></param>
         /// <param name="partitionKey"></param>
         /// <returns></returns>
-        public TDomainEntity GetById(object entityId, string partitionKey = null)
+        public TDomainEntity GetById(object entityId, string partitionKey = "Default")
         {
-            if(entityId == null) throw new ArgumentNullException("entityId");
-            var serializedEntityId = JsonSerializer.SerializeToString(entityId, entityId.GetType());
-            if(partitionKey == null) partitionKey = DefaultSchema.PartitionKey;
+            if(entityId == null)
+            {
+                throw new ArgumentNullException("entityId");
+            }
+            var serializedEntityId = JsonConvert.SerializeObject(entityId);
+            if(string.IsNullOrEmpty(partitionKey) || string.Equals(partitionKey, "Default", StringComparison.CurrentCultureIgnoreCase))
+            {
+                partitionKey = DefaultSchema.PartitionKey;
+            }
             var tableEntity = TableAccessContext.Find(partitionKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
@@ -626,9 +704,15 @@
         /// <returns></returns>
         public async Task<TDomainEntity> GetByIdAsync(object entityId, string partitionKey = null)
         {
-            if(entityId == null) return null;
-            var serializedEntityId = JsonSerializer.SerializeToString(entityId, entityId.GetType());
-            if(partitionKey == null) partitionKey = DefaultSchema.PartitionKey;
+            if(entityId == null)
+            {
+                return null;
+            }
+            var serializedEntityId = JsonConvert.SerializeObject(entityId);
+            if(partitionKey == null)
+            {
+                partitionKey = DefaultSchema.PartitionKey;
+            }
             var tableEntity = await TableAccessContext.FindAsync(partitionKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
@@ -649,7 +733,7 @@
                     TableAccessContext.GetByPartitionKey(partitionKey as string)
                                       .Select(tableEntity => tableEntity.DomainObjectInstance);
             }
-            var serializedPartitionKey = JsonSerializer.SerializeToString(partitionKey, partitionKey.GetType());
+            var serializedPartitionKey = JsonConvert.SerializeObject(partitionKey);
             return
                 TableAccessContext.GetByPartitionKey(serializedPartitionKey)
                                   .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
@@ -667,7 +751,7 @@
                 var entities = await TableAccessContext.GetByPartitionKeyAsync(partitionKey as string);
                 return entities.Select(tableEntity => tableEntity.DomainObjectInstance).ToList();
             }
-            var serializedPartitionKey = JsonSerializer.SerializeToString(partitionKey, partitionKey.GetType());
+            var serializedPartitionKey = JsonConvert.SerializeObject(partitionKey);
             var ents = await TableAccessContext.GetByPartitionKeyAsync(serializedPartitionKey);
             return ents.Select(azureTableEntity => azureTableEntity.DomainObjectInstance).ToList();
         }
@@ -718,8 +802,7 @@
                     ValueBeingIndexed = indexedProperty
                 }
             };
-            var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty,
-                tempCloudTableEntity.IndexedProperty.GetType());
+            var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
             return TableAccessContext.QueryWherePropertyEquals(partitionKey,
                 CtConstants.PropNameIndexedProperty, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
@@ -742,8 +825,7 @@
                     ValueBeingIndexed = indexedProperty
                 }
             };
-            var serializedIndexedProperty = JsonSerializer.SerializeToString(tempCloudTableEntity.IndexedProperty,
-                tempCloudTableEntity.IndexedProperty.GetType());
+            var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
             var entities =
                 await TableAccessContext.QueryWherePropertyEqualsAsync(partitionKey, CtConstants.PropNameIndexedProperty, serializedIndexedProperty);
             return entities.Select(cte => cte.DomainObjectInstance).ToList();
