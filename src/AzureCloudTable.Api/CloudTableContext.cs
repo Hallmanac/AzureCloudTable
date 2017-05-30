@@ -15,12 +15,10 @@ namespace AzureCloudTableContext.Api
     /// <typeparam name="TDomainEntity"></typeparam>
     public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
     {
-        private string _defaultSchemaName;
+        private string _defaultIndexDefinitionName;
         private bool _needToRunTableIndices;
         private CloudTableEntity<PartitionMetaData> _partitionMetaDataEntity;
-        private CloudTable _table;
-
-        private TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
+        private readonly TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
 
 
         /// <summary>
@@ -34,13 +32,19 @@ namespace AzureCloudTableContext.Api
         public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName = null)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TDomainEntity).Name}Table" : tableName;
-            Init(storageAccount, nameOfEntityIdProperty, tableName);
+            NameOfEntityIdProperty = nameOfEntityIdProperty;
+            var tableClient = storageAccount.CreateCloudTableClient();
+            var table = tableClient.GetTableReference(tableName);
+            table.CreateIfNotExists();
+            _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount, tableName);
+            LoadTableMetaData();
+            TableAccessContext = new TableAccessContext<CloudTableEntity<TDomainEntity>>(storageAccount, tableName);
         }
 
         /// <summary>
         /// Gives direct access to the underlying TableAccessContext class that does the interaction with the Azure Table.
         /// </summary>
-        public TableAccessContext<CloudTableEntity<TDomainEntity>> TableAccessContext { get; private set; }
+        public TableAccessContext<CloudTableEntity<TDomainEntity>> TableAccessContext { get; }
 
         /// <summary>
         ///     Gets a list of the PartitionKeys that are used in the table.
@@ -50,7 +54,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Runtime list of active partition schemas.
         /// </summary>
-        public List<AzureTableIndexDefinition<TDomainEntity>> PartitionSchemas { get; set; }
+        public List<AzureTableIndexDefinition<TDomainEntity>> IndexDefinitions { get; set; } = new List<AzureTableIndexDefinition<TDomainEntity>>();
 
         /// <summary>
         ///     This is the name of the property that is used to store the ID of the Domain Entity.
@@ -60,12 +64,12 @@ namespace AzureCloudTableContext.Api
         ///     </para>
         ///     <para>This could be done using the extension method (on Object) called "GetPropertyName"</para>
         /// </summary>
-        public string NameOfEntityIdProperty { get; set; }
+        public string NameOfEntityIdProperty { get; }
 
         /// <summary>
         ///     Gets the default partition partitionKey used for the table.
         /// </summary>
-        public AzureTableIndexDefinition<TDomainEntity> DefaultSchema { get; private set; }
+        public AzureTableIndexDefinition<TDomainEntity> DefaultIndex { get; private set; }
 
         /// <summary>
         ///     Returns a TableAccessContext class which allows for more options in constructing custom queries against the table.
@@ -80,39 +84,38 @@ namespace AzureCloudTableContext.Api
         ///     Creates a new PartitionSchema for the "TDomainEntity" based on the given partitionKey.
         ///     The PartitionSchema RowKey will be set based on the ID property of the "TDomainEntity".
         /// </summary>
-        /// <param name="partitionKey"></param>
+        /// <param name="indexName"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainEntity> CreatePartitionSchema(string partitionKey)
+        public AzureTableIndexDefinition<TDomainEntity> CreateIndexDefinition(string indexName)
         {
             var schema = new AzureTableIndexDefinition<TDomainEntity>(NameOfEntityIdProperty)
-                .SetPartitionKey(partitionKey);
+                .SetIndexNameKey(indexName);
             return schema;
         }
 
         /// <summary>
-        ///     Creates a new PartitionSchema object for the <see cref="TDomainEntity" /> with the PartitionKey being set based on
-        ///     the name of the type by default. The PartitionSchema RowKey will be set based on the ID property of the
-        ///     <see cref="TDomainEntity" />.
+        /// Creates a new PartitionSchema object for the "TDomainEntity" with the PartitionKey being set based on
+        /// the name of the type by default. The PartitionSchema RowKey will be set based on the ID property of the "TDomainEntity".
         /// </summary>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainEntity> CreatePartitionSchema()
+        public AzureTableIndexDefinition<TDomainEntity> CreateIndexDefinition()
         {
-            return CreatePartitionSchema(typeof(TDomainEntity).Name);
+            return CreateIndexDefinition(typeof(TDomainEntity).Name);
         }
 
         /// <summary>
         ///     Adds multiple PartitionSchema types to the current CloudTableContext.
         /// </summary>
         /// <param name="partitionSchemas"></param>
-        public void AddMultiplePartitionSchemas(List<AzureTableIndexDefinition<TDomainEntity>> partitionSchemas)
+        public void AddMultipleIndexDefinitions(List<AzureTableIndexDefinition<TDomainEntity>> partitionSchemas)
         {
             foreach(var partitionSchema in partitionSchemas)
             {
-                if(PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey))
+                if(IndexDefinitions.Any(indexDef => indexDef.IndexNameKey == partitionSchema.IndexNameKey))
                 {
                     continue;
                 }
-                PartitionSchemas.Add(partitionSchema);
+                IndexDefinitions.Add(partitionSchema);
             }
         }
 
@@ -120,13 +123,13 @@ namespace AzureCloudTableContext.Api
         ///     Adds a single PartitionSchema to the current CloudTableContext.
         /// </summary>
         /// <param name="azureTableIndexDefinition"></param>
-        public void AddPartitionSchema(AzureTableIndexDefinition<TDomainEntity> azureTableIndexDefinition)
+        public void AddIndexDefinition(AzureTableIndexDefinition<TDomainEntity> azureTableIndexDefinition)
         {
-            if(PartitionSchemas.Any(schema => schema.PartitionKey == azureTableIndexDefinition.PartitionKey))
+            if(IndexDefinitions.Any(indexDef => indexDef.IndexNameKey == azureTableIndexDefinition.IndexNameKey))
             {
                 return;
             }
-            PartitionSchemas.Add(azureTableIndexDefinition);
+            IndexDefinitions.Add(azureTableIndexDefinition);
         }
 
         /// <summary>
@@ -148,28 +151,13 @@ namespace AzureCloudTableContext.Api
             return $"{DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks:D20}_{Guid.NewGuid()}";
         }
 
-        private void Init(CloudStorageAccount storageAccount, string propertyNameOfEntityId, string tableName)
-        {
-            NameOfEntityIdProperty = propertyNameOfEntityId;
-            var tableClient = storageAccount.CreateCloudTableClient();
-            _table = tableClient.GetTableReference(tableName);
-            _table.CreateIfNotExists();
-            PartitionSchemas = new List<AzureTableIndexDefinition<TDomainEntity>>();
-            _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount,
-                tableName);
-            LoadTableMetaData();
-            TableAccessContext = new TableAccessContext<CloudTableEntity<TDomainEntity>>(storageAccount,
-                tableName);
-        }
-
         private void LoadTableMetaData()
         {
             // Try to load the partition meta data from the existing table (which contains a list of the partition keys in the table).
-            _partitionMetaDataEntity = _tableMetaDataContext.Find(CtConstants.TableMetaDataPartitionKey,
-                CtConstants.PartitionSchemasRowKey);
+            _partitionMetaDataEntity = _tableMetaDataContext.Find(CtConstants.TableMetaDataPartitionKey, CtConstants.PartitionSchemasRowKey);
             // Set the default PartitionKey using the combination below in case there are more than one CloudTableContext objects
             // on the same table.
-            _defaultSchemaName = $"DefaultPartition_ofType_{typeof(TDomainEntity).Name}";
+            _defaultIndexDefinitionName = $"DefaultIndex_ofType_{typeof(TDomainEntity).Name}";
             if(_partitionMetaDataEntity != null)
             {
                 /* This is going through and populating the local PartitionKeysInTable property with the list of keys retrieved
@@ -201,12 +189,12 @@ namespace AzureCloudTableContext.Api
                     PartitionKeysInTable.Add(CtConstants.TableMetaDataPartitionKey);
                 }
                 // The RowKey for the DefaultSchema is set by the given ID property of the TDomainEntity object
-                DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
+                DefaultIndex = CreateIndexDefinition(_defaultIndexDefinitionName)
                     .DefineIndexCriteria(entity => true)
                     .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type.
-                if(PartitionSchemas.All(schema => schema.PartitionKey != DefaultSchema.PartitionKey))
+                if(IndexDefinitions.All(indexDefinition => indexDefinition.IndexNameKey != DefaultIndex.IndexNameKey))
                 {
-                    AddPartitionSchema(DefaultSchema);
+                    AddIndexDefinition(DefaultIndex);
                 }
             }
             else
@@ -214,51 +202,50 @@ namespace AzureCloudTableContext.Api
                 /* Creates a new partition meta data entity and adds the appropriate default partitions and metadata partitions*/
                 _partitionMetaDataEntity = new CloudTableEntity<PartitionMetaData>(CtConstants.TableMetaDataPartitionKey,
                     CtConstants.PartitionSchemasRowKey);
-                DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
+                DefaultIndex = CreateIndexDefinition(_defaultIndexDefinitionName)
                     .DefineIndexCriteria(entity => true)
                     .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type
-                AddPartitionSchema(DefaultSchema);
+                AddIndexDefinition(DefaultIndex);
             }
         }
 
-        private void ValidateTableEntityAgainstPartitionSchemas(CloudTableEntity<TDomainEntity> tableEntity)
+        private void ValidateTableEntityAgainstIndexDefinitions(CloudTableEntity<TDomainEntity> tableEntity)
         {
-            foreach(var partitionSchema in PartitionSchemas)
+            foreach(var indexDefinition in IndexDefinitions)
             {
-                if(partitionSchema.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
+                if (!indexDefinition.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
+                    continue;
+                var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
                 {
-                    var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
-                    {
-                        PartitionKey = partitionSchema.PartitionKey
-                    };
-                    // Checks if the current partition key has been registered with the list of partition keys for the table
-                    if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
-                                               .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
-                    {
-                        _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
-                        SavePartitionKeys();
-                    }
-                    tempTableEntity.RowKey = partitionSchema.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
-                    // Need to get the Object that is to be indexed and then wrap it in a reference object for proper JSV serialization.
-                    var indexedPropertyObject = partitionSchema.GetIndexedPropertyFromCriteria(tempTableEntity.DomainObjectInstance);
-                    tempTableEntity.IndexedProperty = new IndexedObject
-                    {
-                        ValueBeingIndexed = indexedPropertyObject
-                    };
-                    partitionSchema.CloudTableEntities.Add(tempTableEntity);
+                    PartitionKey = indexDefinition.IndexNameKey
+                };
+                // Checks if the current partition key has been registered with the list of partition keys for the table
+                if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
+                                           .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
+                {
+                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
+                    SavePartitionKeys();
                 }
+                tempTableEntity.RowKey = indexDefinition.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
+                // Need to get the Object that is to be indexed and then wrap it in a reference object for proper JSV serialization.
+                var indexedPropertyObject = indexDefinition.GetIndexedPropertyFromCriteria(tempTableEntity.DomainObjectInstance);
+                tempTableEntity.IndexedProperty = new IndexedObject
+                {
+                    ValueBeingIndexed = indexedPropertyObject
+                };
+                indexDefinition.CloudTableEntities.Add(tempTableEntity);
             }
         }
 
-        private async Task ValidateTableEntityAgainstPartitionSchemasAsync(CloudTableEntity<TDomainEntity> tableEntity)
+        private async Task ValidateTableEntityAgainstIndexDefinitionsAsync(CloudTableEntity<TDomainEntity> tableEntity)
         {
-            foreach(var partitionSchema in PartitionSchemas)
+            foreach(var partitionSchema in IndexDefinitions)
             {
                 if(partitionSchema.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
                 {
                     var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
                     {
-                        PartitionKey = partitionSchema.PartitionKey
+                        PartitionKey = partitionSchema.IndexNameKey
                     };
                     // Checks if the current partition key has been registered with the list of partition keys for the table
                     if(_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
@@ -293,7 +280,7 @@ namespace AzureCloudTableContext.Api
                 {
                     DomainObjectInstance = domainEntity
                 };
-                ValidateTableEntityAgainstPartitionSchemas(tempTableEntity);
+                ValidateTableEntityAgainstIndexDefinitions(tempTableEntity);
             }
             WritePartitionSchemasToTable(batchOperation);
         }
@@ -307,7 +294,7 @@ namespace AzureCloudTableContext.Api
                 DomainObjectInstance = domainEntity
             }))
             {
-                await ValidateTableEntityAgainstPartitionSchemasAsync(tempTableEntity);
+                await ValidateTableEntityAgainstIndexDefinitionsAsync(tempTableEntity);
             }
             WritePartitionSchemasToTable(batchOperation);
         }
@@ -320,7 +307,7 @@ namespace AzureCloudTableContext.Api
             {
                 DomainObjectInstance = domainEntity
             };
-            ValidateTableEntityAgainstPartitionSchemas(tempTableEntity);
+            ValidateTableEntityAgainstIndexDefinitions(tempTableEntity);
             WritePartitionSchemasToTable(batchOperation);
         }
 
@@ -332,7 +319,7 @@ namespace AzureCloudTableContext.Api
             {
                 DomainObjectInstance = domainEntity
             };
-            await ValidateTableEntityAgainstPartitionSchemasAsync(tempTableEntity);
+            await ValidateTableEntityAgainstIndexDefinitionsAsync(tempTableEntity);
             await WritePartitionSchemasToTableAsync(batchOperation).ConfigureAwait(false);
         }
 
@@ -340,14 +327,14 @@ namespace AzureCloudTableContext.Api
         {
             var shouldWriteToTable = false;
             // Check local list of Partition Schemas against the list of partition keys in _table Context
-            PartitionSchemas.ForEach(schema =>
+            IndexDefinitions.ForEach(schema =>
             {
-                if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
+                if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.IndexNameKey))
                 {
-                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
-                    if(!PartitionKeysInTable.Contains(schema.PartitionKey))
+                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.IndexNameKey);
+                    if(!PartitionKeysInTable.Contains(schema.IndexNameKey))
                     {
-                        PartitionKeysInTable.Add(schema.PartitionKey);
+                        PartitionKeysInTable.Add(schema.IndexNameKey);
                     }
                     shouldWriteToTable = true;
                     _needToRunTableIndices = true;
@@ -363,14 +350,14 @@ namespace AzureCloudTableContext.Api
         {
             var shouldWriteToTable = false;
             // Check local list of Partition Schemas against the list of partition keys in _table Context
-            PartitionSchemas.ForEach(schema =>
+            IndexDefinitions.ForEach(schema =>
             {
-                if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.PartitionKey))
+                if(!_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.IndexNameKey))
                 {
-                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.PartitionKey);
-                    if(!PartitionKeysInTable.Contains(schema.PartitionKey))
+                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.IndexNameKey);
+                    if(!PartitionKeysInTable.Contains(schema.IndexNameKey))
                     {
-                        PartitionKeysInTable.Add(schema.PartitionKey);
+                        PartitionKeysInTable.Add(schema.IndexNameKey);
                     }
                     shouldWriteToTable = true;
                     _needToRunTableIndices = true;
@@ -388,7 +375,7 @@ namespace AzureCloudTableContext.Api
             {
                 return;
             }
-            var defaultPartitionEntities = GetByDefaultSchema().ToList();
+            var defaultPartitionEntities = GetAll().ToList();
             _needToRunTableIndices = false;
             if(defaultPartitionEntities.Count > 1)
             {
@@ -402,7 +389,7 @@ namespace AzureCloudTableContext.Api
             {
                 return;
             }
-            var defaultPartitionEntities = await GetByDefaultSchemaAsync();
+            var defaultPartitionEntities = await GetAllAsync();
             _needToRunTableIndices = false;
             if(defaultPartitionEntities.Count > 1)
             {
@@ -412,7 +399,7 @@ namespace AzureCloudTableContext.Api
 
         private void WritePartitionSchemasToTable(SaveType batchOperation)
         {
-            Parallel.ForEach(PartitionSchemas, schema =>
+            Parallel.ForEach(IndexDefinitions, schema =>
             {
                 if(schema.CloudTableEntities.Count > 0)
                 {
@@ -443,7 +430,7 @@ namespace AzureCloudTableContext.Api
 
         private async Task WritePartitionSchemasToTableAsync(SaveType batchOperation)
         {
-            await Task.Run(() => Parallel.ForEach(PartitionSchemas, async schema =>
+            await Task.Run(() => Parallel.ForEach(IndexDefinitions, async schema =>
             {
                 if(schema.CloudTableEntities.Count > 0)
                 {
@@ -642,92 +629,87 @@ namespace AzureCloudTableContext.Api
 
         #region ---- Read Operations ----
         /// <summary>
-        ///     Gets all the entities via the DefaultSchema.
+        ///     Gets all the entities via the Default Index.
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> GetByDefaultSchema()
+        public IEnumerable<TDomainEntity> GetAll()
         {
-            return TableAccessContext.GetByPartitionKey(_defaultSchemaName)
+            return TableAccessContext.GetByPartitionKey(_defaultIndexDefinitionName)
                                      .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
         /// <summary>
-        ///     Gets all the entities via the DefaultSchema asynchronously.
+        ///     Gets all the entities via the Default Index asynchronously.
         /// </summary>
         /// <returns></returns>
-        public async Task<List<TDomainEntity>> GetByDefaultSchemaAsync()
+        public async Task<List<TDomainEntity>> GetAllAsync()
         {
-            var partition = await TableAccessContext.GetByPartitionKeyAsync(_defaultSchemaName);
+            var partition = await TableAccessContext.GetByPartitionKeyAsync(_defaultIndexDefinitionName);
             return partition.Select(cte => cte.DomainObjectInstance).ToList();
         }
 
         /// <summary>
         ///     Gets a domain entity using the partition partitionKey's PartitionKey (for the PartitionKey) and the entity's Id
         ///     (for the RowKey).
-        ///     If the
-        ///     <param name="partitionKey"></param>
-        ///     parameter is left null then the DefaultSchema is used.
+        ///     If the indexNameKey parameter is left null then the DefaultSchema is used.
         /// </summary>
         /// <param name="entityId"></param>
-        /// <param name="partitionKey"></param>
+        /// <param name="indexNameKey"></param>
         /// <returns></returns>
-        public TDomainEntity GetById(object entityId, string partitionKey = "Default")
+        public TDomainEntity GetById(object entityId, string indexNameKey = "Default")
         {
             if(entityId == null)
             {
-                throw new ArgumentNullException("entityId");
+                throw new ArgumentNullException(nameof(entityId));
             }
             var serializedEntityId = JsonConvert.SerializeObject(entityId);
-            if(string.IsNullOrEmpty(partitionKey) || string.Equals(partitionKey, "Default", StringComparison.CurrentCultureIgnoreCase))
+            if(string.IsNullOrEmpty(indexNameKey) || string.Equals(indexNameKey, "Default", StringComparison.CurrentCultureIgnoreCase))
             {
-                partitionKey = DefaultSchema.PartitionKey;
+                indexNameKey = DefaultIndex.IndexNameKey;
             }
-            var tableEntity = TableAccessContext.Find(partitionKey, serializedEntityId);
+            var tableEntity = TableAccessContext.Find(indexNameKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
         /// <summary>
         ///     Asynchronously gets a domain entity by the ID using the given entityId and based on the index defined by the given
         ///     partitionKey.
-        ///     If the
-        ///     <param name="partitionKey"></param>
-        ///     parameter is left null then the DefaultSchema is used.
+        ///     If the indexNameKey parameter is left null then the DefaultSchema is used.
         /// </summary>
         /// <param name="entityId"></param>
-        /// <param name="partitionKey"></param>
+        /// <param name="indexNameKey"></param>
         /// <returns></returns>
-        public async Task<TDomainEntity> GetByIdAsync(object entityId, string partitionKey = null)
+        public async Task<TDomainEntity> GetByIdAsync(object entityId, string indexNameKey = null)
         {
             if(entityId == null)
             {
                 return null;
             }
             var serializedEntityId = JsonConvert.SerializeObject(entityId);
-            if(partitionKey == null)
+            if(indexNameKey == null)
             {
-                partitionKey = DefaultSchema.PartitionKey;
+                indexNameKey = DefaultIndex.IndexNameKey;
             }
-            var tableEntity = await TableAccessContext.FindAsync(partitionKey, serializedEntityId);
+            var tableEntity = await TableAccessContext.FindAsync(indexNameKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
         /// <summary>
         ///     Retrieves all domain entities within a given Partition.
         /// </summary>
-        /// <param name="partitionKey">
-        ///     If the object being passed in is not a string, it gets serialized to a Jsv string (a la
-        ///     ServiceStack.Text library) and that string gets used as a PartitionKey.
+        /// <param name="indexKey">
+        ///     If the object being passed in is not a string, it gets serialized to a JSON string and that string gets used as a PartitionKey (a.k.a IndexNameKey).
         /// </param>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> GetByPartitionKey(object partitionKey)
+        public IEnumerable<TDomainEntity> GetAllItemsFromIndex(object indexKey)
         {
-            if(partitionKey is string)
+            if (indexKey is string key)
             {
                 return
-                    TableAccessContext.GetByPartitionKey(partitionKey as string)
+                    TableAccessContext.GetByPartitionKey(key)
                                       .Select(tableEntity => tableEntity.DomainObjectInstance);
             }
-            var serializedPartitionKey = JsonConvert.SerializeObject(partitionKey);
+            var serializedPartitionKey = JsonConvert.SerializeObject(indexKey);
             return
                 TableAccessContext.GetByPartitionKey(serializedPartitionKey)
                                   .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
@@ -736,16 +718,16 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Asynchronously retrieves all domain entities within a given Partition.
         /// </summary>
-        /// <param name="partitionKey"></param>
+        /// <param name="indexKey"></param>
         /// <returns></returns>
-        public async Task<List<TDomainEntity>> GetByPartitionKeyAsync(object partitionKey)
+        public async Task<List<TDomainEntity>> GetAllItemsFromIndexAsync(object indexKey)
         {
-            if(partitionKey is string)
+            if (indexKey is string key)
             {
-                var entities = await TableAccessContext.GetByPartitionKeyAsync(partitionKey as string);
+                var entities = await TableAccessContext.GetByPartitionKeyAsync(key);
                 return entities.Select(tableEntity => tableEntity.DomainObjectInstance).ToList();
             }
-            var serializedPartitionKey = JsonConvert.SerializeObject(partitionKey);
+            var serializedPartitionKey = JsonConvert.SerializeObject(indexKey);
             var ents = await TableAccessContext.GetByPartitionKeyAsync(serializedPartitionKey);
             return ents.Select(azureTableEntity => azureTableEntity.DomainObjectInstance).ToList();
         }
@@ -757,8 +739,7 @@ namespace AzureCloudTableContext.Api
         /// <param name="minRowKey"></param>
         /// <param name="maxRowKey"></param>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> GetByPartitionKeyWithRowkeyRange(string partitionKey, string minRowKey = "",
-                                                                           string maxRowKey = "")
+        public IEnumerable<TDomainEntity> GetFromIndexWithinValueRange(string partitionKey, string minRowKey = "", string maxRowKey = "")
         {
             return
                 TableAccessContext.GetByPartitionKeyWithRowKeyRange(partitionKey, minRowKey, maxRowKey)
@@ -772,22 +753,19 @@ namespace AzureCloudTableContext.Api
         /// <param name="minRowKey"></param>
         /// <param name="maxRowKey"></param>
         /// <returns></returns>
-        public async Task<List<TDomainEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string partitionKey, string minRowKey = "", string maxRowKey = "")
+        public async Task<List<TDomainEntity>> GetFromIndexWithinValueRangeAsync(string partitionKey, string minRowKey = "", string maxRowKey = "")
         {
             var entites = await TableAccessContext.GetByPartitionKeyWithRowKeyRangeAsync(partitionKey, minRowKey, maxRowKey);
             return entites.Select(ent => ent.DomainObjectInstance).ToList();
         }
 
         /// <summary>
-        ///     Gets a set of domain entities based on a given ParitionSchema with a filter based on the
-        ///     <param name="indexedProperty"></param>
-        ///     that
-        ///     gets passed in.
+        ///     Gets a set of domain entities based on a given ParitionSchema with a filter based on the indexProperty that gets passed in.
         /// </summary>
-        /// <param name="partitionKey"></param>
+        /// <param name="indexNameKey"></param>
         /// <param name="indexedProperty"></param>
         /// <returns></returns>
-        public IEnumerable<TDomainEntity> GetByIndexedProperty(string partitionKey, object indexedProperty)
+        public IEnumerable<TDomainEntity> GetByIndexedProperty(string indexNameKey, object indexedProperty)
         {
             var tempCloudTableEntity = new CloudTableEntity<TDomainEntity>
             {
@@ -797,15 +775,12 @@ namespace AzureCloudTableContext.Api
                 }
             };
             var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
-            return TableAccessContext.QueryWherePropertyEquals(partitionKey,
+            return TableAccessContext.QueryWherePropertyEquals(indexNameKey,
                 CtConstants.PropNameIndexedProperty, serializedIndexedProperty).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
         /// <summary>
-        ///     Asynchronously gets a set of domain entities based on a given ParitionSchema with a filter based on the
-        ///     <param name="indexedProperty"></param>
-        ///     that
-        ///     gets passed in.
+        ///     Asynchronously gets a set of domain entities based on a given ParitionSchema with a filter based on the that gets passed in.
         /// </summary>
         /// <param name="partitionKey"></param>
         /// <param name="indexedProperty"></param>

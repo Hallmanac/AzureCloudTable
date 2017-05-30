@@ -13,7 +13,7 @@ namespace AzureCloudTableContext.Api
         private Func<TDomainObject, object> _getIndexedPropertyFromCriteria;
         private Func<TDomainObject, string> _getRowKeyFromCriteria;
         private Func<TDomainObject, bool> _indexCriteriaMethod;
-        private string _partitionKey;
+        private string _indexNameKey;
 
         /// <summary>
         /// Constructor of a new index definition object that takes in the string name of the property that defines
@@ -29,22 +29,22 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Partition Key.
         /// </summary>
-        public string PartitionKey
+        public string IndexNameKey
         {
             get
             {
-                if(string.IsNullOrWhiteSpace(_partitionKey))
+                if(string.IsNullOrWhiteSpace(_indexNameKey))
                 {
-                    _partitionKey = typeof(TDomainObject).Name;
+                    _indexNameKey = typeof(TDomainObject).Name;
                 }
-                return _partitionKey;
+                return _indexNameKey;
             }
         }
 
         /// <summary>
         /// String name of the property that defines the ID of the domain object.
         /// </summary>
-        public string NameOfIdProperty { get; private set; }
+        public string NameOfIdProperty { get; }
 
         /// <summary>
         /// Called to verify whether or not the given domain entity meets the requirements to be in the current PartitionSchema.
@@ -104,13 +104,13 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Sets the one and only partition key related to this schema.
+        /// Sets the one and only partition key related to this index.
         /// </summary>
         /// <param name="givenPartitionKey"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> SetPartitionKey(string givenPartitionKey)
+        public AzureTableIndexDefinition<TDomainObject> SetIndexNameKey(string givenPartitionKey)
         {
-            _partitionKey = givenPartitionKey;
+            _indexNameKey = givenPartitionKey;
             return this;
         }
 
@@ -126,13 +126,18 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Sets the criteria that determines the RowKey.
+        /// Creates a custom definition for the indexed value. This is used rarely when you want to create a one-off instance of the same object.
+        /// For example, when you want to keep a history of changes to an object instance over time you could use the func like so:
         /// </summary>
-        /// <param name="givenRowKeyCriteria">If the RowKey will be based on an object other than a string
-        /// it is best to use the JsonSerializer.SerializeToString(objectToSerialize, Type) serialization method 
-        /// from ServiceStack.Text library.</param>
+        /// <para>
+        /// object => CloudTableContext.GetChronologicalBasedRowKey()
+        /// </para>
+        /// <param name="givenRowKeyCriteria">
+        /// If the RowKey will be based on an object other than a string it is best to use 
+        /// the JsonConvert.SerializeObject(...) serialization method from Json.Net.
+        /// </param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> SetRowKeyCriteria(Func<TDomainObject, string> givenRowKeyCriteria)
+        public AzureTableIndexDefinition<TDomainObject> SetCustomDefinitionForIndexedValue(Func<TDomainObject, string> givenRowKeyCriteria)
         {
             _getRowKeyFromCriteria = givenRowKeyCriteria;
             return this;
