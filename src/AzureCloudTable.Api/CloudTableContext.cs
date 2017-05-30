@@ -202,7 +202,7 @@ namespace AzureCloudTableContext.Api
                 }
                 // The RowKey for the DefaultSchema is set by the given ID property of the TDomainEntity object
                 DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
-                    .SetSchemaCriteria(entity => true)
+                    .DefineIndexCriteria(entity => true)
                     .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type.
                 if(PartitionSchemas.All(schema => schema.PartitionKey != DefaultSchema.PartitionKey))
                 {
@@ -215,7 +215,7 @@ namespace AzureCloudTableContext.Api
                 _partitionMetaDataEntity = new CloudTableEntity<PartitionMetaData>(CtConstants.TableMetaDataPartitionKey,
                     CtConstants.PartitionSchemasRowKey);
                 DefaultSchema = CreatePartitionSchema(_defaultSchemaName)
-                    .SetSchemaCriteria(entity => true)
+                    .DefineIndexCriteria(entity => true)
                     .SetIndexedPropertyCriteria(entity => entity.GetType().Name); // Enables searching directly on the type
                 AddPartitionSchema(DefaultSchema);
             }
@@ -225,7 +225,7 @@ namespace AzureCloudTableContext.Api
         {
             foreach(var partitionSchema in PartitionSchemas)
             {
-                if(partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
+                if(partitionSchema.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
                 {
                     var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
                     {
@@ -254,7 +254,7 @@ namespace AzureCloudTableContext.Api
         {
             foreach(var partitionSchema in PartitionSchemas)
             {
-                if(partitionSchema.DomainObjectMatchesPartitionCriteria(tableEntity.DomainObjectInstance))
+                if(partitionSchema.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
                 {
                     var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
                     {

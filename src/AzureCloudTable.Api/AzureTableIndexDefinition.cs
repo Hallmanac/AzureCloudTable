@@ -50,7 +50,7 @@ namespace AzureCloudTableContext.Api
         /// Called to verify whether or not the given domain entity meets the requirements to be in the current PartitionSchema.
         /// Default is to return true.
         /// </summary>
-        public Func<TDomainObject, bool> DomainObjectMatchesPartitionCriteria
+        public Func<TDomainObject, bool> DomainObjectMatchesIndexCriteria
         {
             get { return _indexCriteriaMethod ?? (_indexCriteriaMethod = givenEntity => true); }
         }
@@ -62,21 +62,20 @@ namespace AzureCloudTableContext.Api
         {
             get
             {
-                if(_getRowKeyFromCriteria == null)
+                if (_getRowKeyFromCriteria != null)
+                    return _getRowKeyFromCriteria;
+                if(!string.IsNullOrWhiteSpace(NameOfIdProperty))
                 {
-                    if(!string.IsNullOrWhiteSpace(NameOfIdProperty))
+                    _getRowKeyFromCriteria = entity =>
                     {
-                        _getRowKeyFromCriteria = entity =>
-                        {
-                            var propInfo = typeof(TDomainObject).GetProperty(NameOfIdProperty);
-                            var propValue = propInfo.GetValue(entity);
-                            return JsonConvert.SerializeObject(propValue);
-                        };
-                    }
-                    else
-                    {
-                        _getRowKeyFromCriteria = entity => GetChronologicalBasedRowKey();
-                    }
+                        var propInfo = typeof(TDomainObject).GetProperty(NameOfIdProperty);
+                        var propValue = propInfo?.GetValue(entity);
+                        return propValue != null ? JsonConvert.SerializeObject(propValue) : "";
+                    };
+                }
+                else
+                {
+                    _getRowKeyFromCriteria = entity => GetChronologicalBasedRowKey();
                 }
                 return _getRowKeyFromCriteria;
             }
@@ -116,11 +115,11 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        /// Sets the criteria that is used to determine if a given object qualifies for this partition scheme.
+        /// Sets the criteria that is used to determine if a given object qualifies for this index.
         /// </summary>
         /// <param name="givenCriteria"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> SetSchemaCriteria(Func<TDomainObject, bool> givenCriteria)
+        public AzureTableIndexDefinition<TDomainObject> DefineIndexCriteria(Func<TDomainObject, bool> givenCriteria)
         {
             _indexCriteriaMethod = givenCriteria;
             return this;
