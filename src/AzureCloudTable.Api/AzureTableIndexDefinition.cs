@@ -8,7 +8,7 @@ namespace AzureCloudTableContext.Api
     ///     Class that defines a partitioning strategy to store a domain entity in Azure Table Storage.
     /// </summary>
     /// <typeparam name="TDomainObject">The POCO class that is being written to Azure Table Storage</typeparam>
-    public class PartitionSchema<TDomainObject> where TDomainObject : class, new()
+    public class AzureTableIndexDefinition<TDomainObject> where TDomainObject : class, new()
     {
         private Func<TDomainObject, object> _getIndexedPropertyFromCriteria;
         private Func<TDomainObject, string> _getRowKeyFromCriteria;
@@ -16,11 +16,11 @@ namespace AzureCloudTableContext.Api
         private string _partitionKey;
 
         /// <summary>
-        /// Constructor of a new PartitionSchema object that takes in the string name of the property that defines
+        /// Constructor of a new index definition object that takes in the string name of the property that defines
         /// the ID of the domain object.
         /// </summary>
         /// <param name="nameOfIdProperty"></param>
-        public PartitionSchema(string nameOfIdProperty)
+        public AzureTableIndexDefinition(string nameOfIdProperty)
         {
             CloudTableEntities = new List<CloudTableEntity<TDomainObject>>();
             NameOfIdProperty = nameOfIdProperty;
@@ -109,7 +109,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenPartitionKey"></param>
         /// <returns></returns>
-        public PartitionSchema<TDomainObject> SetPartitionKey(string givenPartitionKey)
+        public AzureTableIndexDefinition<TDomainObject> SetPartitionKey(string givenPartitionKey)
         {
             _partitionKey = givenPartitionKey;
             return this;
@@ -120,7 +120,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenCriteria"></param>
         /// <returns></returns>
-        public PartitionSchema<TDomainObject> SetSchemaCriteria(Func<TDomainObject, bool> givenCriteria)
+        public AzureTableIndexDefinition<TDomainObject> SetSchemaCriteria(Func<TDomainObject, bool> givenCriteria)
         {
             _indexCriteriaMethod = givenCriteria;
             return this;
@@ -133,7 +133,7 @@ namespace AzureCloudTableContext.Api
         /// it is best to use the JsonSerializer.SerializeToString(objectToSerialize, Type) serialization method 
         /// from ServiceStack.Text library.</param>
         /// <returns></returns>
-        public PartitionSchema<TDomainObject> SetRowKeyCriteria(Func<TDomainObject, string> givenRowKeyCriteria)
+        public AzureTableIndexDefinition<TDomainObject> SetRowKeyCriteria(Func<TDomainObject, string> givenRowKeyCriteria)
         {
             _getRowKeyFromCriteria = givenRowKeyCriteria;
             return this;
@@ -144,7 +144,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenIndexedPropCriteria"></param>
         /// <returns></returns>
-        public PartitionSchema<TDomainObject> SetIndexedPropertyCriteria(Func<TDomainObject, object> givenIndexedPropCriteria)
+        public AzureTableIndexDefinition<TDomainObject> SetIndexedPropertyCriteria(Func<TDomainObject, object> givenIndexedPropCriteria)
         {
             _getIndexedPropertyFromCriteria = givenIndexedPropCriteria;
             return this;

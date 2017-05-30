@@ -50,7 +50,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Runtime list of active partition schemas.
         /// </summary>
-        public List<PartitionSchema<TDomainEntity>> PartitionSchemas { get; set; }
+        public List<AzureTableIndexDefinition<TDomainEntity>> PartitionSchemas { get; set; }
 
         /// <summary>
         ///     This is the name of the property that is used to store the ID of the Domain Entity.
@@ -65,7 +65,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Gets the default partition partitionKey used for the table.
         /// </summary>
-        public PartitionSchema<TDomainEntity> DefaultSchema { get; private set; }
+        public AzureTableIndexDefinition<TDomainEntity> DefaultSchema { get; private set; }
 
         /// <summary>
         ///     Returns a TableAccessContext class which allows for more options in constructing custom queries against the table.
@@ -82,9 +82,9 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="partitionKey"></param>
         /// <returns></returns>
-        public PartitionSchema<TDomainEntity> CreatePartitionSchema(string partitionKey)
+        public AzureTableIndexDefinition<TDomainEntity> CreatePartitionSchema(string partitionKey)
         {
-            var schema = new PartitionSchema<TDomainEntity>(NameOfEntityIdProperty)
+            var schema = new AzureTableIndexDefinition<TDomainEntity>(NameOfEntityIdProperty)
                 .SetPartitionKey(partitionKey);
             return schema;
         }
@@ -95,7 +95,7 @@ namespace AzureCloudTableContext.Api
         ///     <see cref="TDomainEntity" />.
         /// </summary>
         /// <returns></returns>
-        public PartitionSchema<TDomainEntity> CreatePartitionSchema()
+        public AzureTableIndexDefinition<TDomainEntity> CreatePartitionSchema()
         {
             return CreatePartitionSchema(typeof(TDomainEntity).Name);
         }
@@ -104,7 +104,7 @@ namespace AzureCloudTableContext.Api
         ///     Adds multiple PartitionSchema types to the current CloudTableContext.
         /// </summary>
         /// <param name="partitionSchemas"></param>
-        public void AddMultiplePartitionSchemas(List<PartitionSchema<TDomainEntity>> partitionSchemas)
+        public void AddMultiplePartitionSchemas(List<AzureTableIndexDefinition<TDomainEntity>> partitionSchemas)
         {
             foreach(var partitionSchema in partitionSchemas)
             {
@@ -119,14 +119,14 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Adds a single PartitionSchema to the current CloudTableContext.
         /// </summary>
-        /// <param name="partitionSchema"></param>
-        public void AddPartitionSchema(PartitionSchema<TDomainEntity> partitionSchema)
+        /// <param name="azureTableIndexDefinition"></param>
+        public void AddPartitionSchema(AzureTableIndexDefinition<TDomainEntity> azureTableIndexDefinition)
         {
-            if(PartitionSchemas.Any(schema => schema.PartitionKey == partitionSchema.PartitionKey))
+            if(PartitionSchemas.Any(schema => schema.PartitionKey == azureTableIndexDefinition.PartitionKey))
             {
                 return;
             }
-            PartitionSchemas.Add(partitionSchema);
+            PartitionSchemas.Add(azureTableIndexDefinition);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);
             _table.CreateIfNotExists();
-            PartitionSchemas = new List<PartitionSchema<TDomainEntity>>();
+            PartitionSchemas = new List<AzureTableIndexDefinition<TDomainEntity>>();
             _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount,
                 tableName);
             LoadTableMetaData();
