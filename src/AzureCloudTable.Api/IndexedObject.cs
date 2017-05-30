@@ -5,6 +5,9 @@
     /// </summary>
     public class IndexedObject 
     {
+        /// <summary>
+        /// Class to hold the indexed object.
+        /// </summary>
         public IndexedObject()
         {
             ValueBeingIndexed = null;
