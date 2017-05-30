@@ -26,13 +26,13 @@ namespace AzureCloudTableContext.Api
 
         public TableAccessContext(CloudStorageAccount storageAccount)
         {
-            var tableName = string.Format("{0}Table", typeof(TAzureTableEntity).Name);
+            var tableName = $"{typeof(TAzureTableEntity).Name}Table";
             InitTableAccess(storageAccount, tableName);
         }
 
         public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
         {
-            tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TAzureTableEntity).Name) : tableName;
+            tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
             InitTableAccess(storageAccount, tableName);
         }
 
@@ -460,16 +460,15 @@ namespace AzureCloudTableContext.Api
             string combinedFilter;
             if(string.IsNullOrWhiteSpace(minRowKey))
             {
-                combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMaximum);
+                combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum})";
             }
             else if(string.IsNullOrWhiteSpace(maxRowKey))
             {
-                combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMinimum);
+                combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMinimum})";
             }
             else
             {
-                combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
-                    TableOperators.And, rKMinimum);
+                combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum}) {TableOperators.And} ({rKMinimum})";
             }
             var query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             return RunQuerySegment(query);
@@ -493,16 +492,15 @@ namespace AzureCloudTableContext.Api
             string combinedFilter;
             if(string.IsNullOrWhiteSpace(minRowKey))
             {
-                combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMaximum);
+                combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum})";
             }
             else if(string.IsNullOrWhiteSpace(maxRowKey))
             {
-                combinedFilter = string.Format("({0}) {1} ({2})", pKFilter, TableOperators.And, rKMinimum);
+                combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMinimum})";
             }
             else
             {
-                combinedFilter = string.Format("({0}) {1} ({2}) {3} ({4})", pKFilter, TableOperators.And, rKMaximum,
-                    TableOperators.And, rKMinimum);
+                combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum}) {TableOperators.And} ({rKMinimum})";
             }
             var query = _table.CreateQuery<TAzureTableEntity>().Where(combinedFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
@@ -521,7 +519,7 @@ namespace AzureCloudTableContext.Api
         private TableQuery<TAzureTableEntity> CreateQueryWithPartitionKeyAndPropertyFilter(string partitionKey, string propertyFilter)
         {
             var pkFilter = GeneratePartitionKeyFilterCondition(partitionKey);
-            var combinedFilter = string.Format("({0}) {1} ({2})", pkFilter, TableOperators.And, propertyFilter);
+            var combinedFilter = $"({pkFilter}) {TableOperators.And} ({propertyFilter})";
             var query = new TableQuery<TAzureTableEntity>().Where(combinedFilter);
             return query;
         }

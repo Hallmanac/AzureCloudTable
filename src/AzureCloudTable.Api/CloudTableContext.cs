@@ -36,7 +36,7 @@ namespace AzureCloudTableContext.Api
         /// <param name="tableName"></param>
         public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName = null)
         {
-            tableName = string.IsNullOrWhiteSpace(tableName) ? string.Format("{0}Table", typeof(TDomainEntity).Name) : tableName;
+            tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TDomainEntity).Name}Table" : tableName;
             Init(storageAccount, nameOfEntityIdProperty, tableName);
         }
 
@@ -140,7 +140,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public string GetChronologicalBasedRowKey()
         {
-            return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), JsonConvert.SerializeObject(Guid.NewGuid()));
+            return $"{(DateTimeOffset.UtcNow.Ticks):D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
         }
 
         /// <summary>
@@ -149,8 +149,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public string GetReverseChronologicalBasedRowKey()
         {
-            return string.Format("{0:D20}_{1}", (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.Now.Ticks),
-                Guid.NewGuid());
+            return $"{(DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks):D20}_{Guid.NewGuid()}";
         }
 
         private void Init(CloudStorageAccount storageAccount, string propertyNameOfEntityId, string tableName)
@@ -175,7 +174,7 @@ namespace AzureCloudTableContext.Api
                 CtConstants.PartitionSchemasRowKey);
             // Set the default PartitionKey using the combination below in case there are more than one CloudTableContext objects
             // on the same table.
-            _defaultSchemaName = string.Format("DefaultPartition_ofType_{0}", typeof(TDomainEntity).Name);
+            _defaultSchemaName = $"DefaultPartition_ofType_{typeof(TDomainEntity).Name}";
             if(_partitionMetaDataEntity != null)
             {
                 /* This is going through and populating the local PartitionKeysInTable property with the list of keys retrieved

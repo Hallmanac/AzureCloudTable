@@ -95,13 +95,12 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         private static string GetChronologicalBasedRowKey()
         {
-            return string.Format("{0:D20}_{1}", (DateTimeOffset.Now.Ticks), JsonConvert.SerializeObject(Guid.NewGuid()));
+            return $"{(DateTimeOffset.UtcNow.Ticks):D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
         }
 
         private string GetReverseChronologicalBasedRowKey()
         {
-            return string.Format("{0:D20}_{1}", (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.Now.Ticks),
-                Guid.NewGuid());
+            return $"{(DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks):D20}_{Guid.NewGuid()}";
         }
 
         /// <summary>

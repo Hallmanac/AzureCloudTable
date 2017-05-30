@@ -100,8 +100,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public string SetDefaultRowKey()
         {
-            var defaultRowKeyByTime = string.Format("{0:d19}",
-                (DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks));
+            var defaultRowKeyByTime = $"{(DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks):d19}";
             return defaultRowKeyByTime + "_" + JsonConvert.SerializeObject(Guid.NewGuid());
         }
 
@@ -168,7 +167,7 @@ namespace AzureCloudTableContext.Api
                     maxStringBlockSize = (stringLength - i);
                 }
                 var entityValue = serializedObject.Substring(i, maxStringBlockSize);
-                var entityKey = string.Format("E{0:D2}", (dictionaryCount + 1));
+                var entityKey = $"E{(dictionaryCount + 1):D2}";
                 if(fatEntityDictionary.Count < 14)
                 {
                     fatEntityDictionary.Add(entityKey, new EntityProperty(entityValue));
@@ -195,8 +194,16 @@ namespace AzureCloudTableContext.Api
     /// </summary>
     public class ObjectToLargeForFatEntityException : Exception
     {
+        /// <summary>
+        /// Object is too large
+        /// </summary>
         public ObjectToLargeForFatEntityException() { }
 
+        /// <summary>
+        /// Object is too large
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="givenObject"></param>
         public ObjectToLargeForFatEntityException(string message, object givenObject)
             : base(message) { GivenObject = givenObject; }
 
