@@ -12,7 +12,7 @@ namespace AzureCloudTableContext.Api
     {
         private Func<TDomainObject, object> _getIndexedPropertyFromCriteria;
         private Func<TDomainObject, string> _getRowKeyFromCriteria;
-        private Func<TDomainObject, bool> _partitionCriteriaMethod;
+        private Func<TDomainObject, bool> _indexCriteriaMethod;
         private string _partitionKey;
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         public Func<TDomainObject, bool> DomainObjectMatchesPartitionCriteria
         {
-            get { return _partitionCriteriaMethod ?? (_partitionCriteriaMethod = givenEntity => true); }
+            get { return _indexCriteriaMethod ?? (_indexCriteriaMethod = givenEntity => true); }
         }
 
         /// <summary>
@@ -95,12 +95,13 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         private static string GetChronologicalBasedRowKey()
         {
-            return $"{(DateTimeOffset.UtcNow.Ticks):D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
+            var now = DateTimeOffset.UtcNow;
+            return $"{now.Ticks:D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
         }
 
         private string GetReverseChronologicalBasedRowKey()
         {
-            return $"{(DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks):D20}_{Guid.NewGuid()}";
+            return $"{DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks:D20}_{Guid.NewGuid()}";
         }
 
         /// <summary>
@@ -121,7 +122,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public PartitionSchema<TDomainObject> SetSchemaCriteria(Func<TDomainObject, bool> givenCriteria)
         {
-            _partitionCriteriaMethod = givenCriteria;
+            _indexCriteriaMethod = givenCriteria;
             return this;
         }
 

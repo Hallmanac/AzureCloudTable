@@ -94,7 +94,7 @@ namespace AzureCloudTableContext.Api
 
         /// <summary>
         ///     Sets the value of the RowKey for the table entity as a padded integer based on the difference of
-        ///     the max value property of the DateTimeOffset and the DateTimeOffset.Now property, followed by an
+        ///     the max value property of the DateTimeOffset and the DateTimeOffset.UtcNow property, followed by an
         ///     underscore and an random generated GUID.
         /// </summary>
         /// <returns></returns>

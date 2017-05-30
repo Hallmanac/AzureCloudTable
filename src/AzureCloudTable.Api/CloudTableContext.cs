@@ -10,8 +10,7 @@ namespace AzureCloudTableContext.Api
 {
     /// <summary>
     ///     Class used to wrap a domain entity for use with Azure Table Storage via using PartitionKey strategies (known as
-    ///     PartitionSchemas)
-    ///     for grouping and filtering.
+    ///     PartitionSchemas) for grouping and filtering.
     /// </summary>
     /// <typeparam name="TDomainEntity"></typeparam>
     public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
@@ -23,13 +22,11 @@ namespace AzureCloudTableContext.Api
 
         private TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
 
+
         /// <summary>
-        ///     Initializes a new CloudTableContext object. If the
-        ///     <param name="tableName"></param>
-        ///     parameter is left null, then the default
-        ///     naming scheme used is the name of the generic type's name with "Table" appended to it. For example "SomeClass" +
-        ///     "Table" for
-        ///     the table name of "SomeClassTable".
+        /// Initializes a new CloudTableContext object. If the "tableName" parameter is left null, then 
+        /// the default naming scheme used is the name of the generic type's name with "Table" appended 
+        /// to it. For example "SomeClass" + "Table" for the table name of "SomeClassTable".
         /// </summary>
         /// <param name="storageAccount"></param>
         /// <param name="nameOfEntityIdProperty"></param>
@@ -48,7 +45,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Gets a list of the PartitionKeys that are used in the table.
         /// </summary>
-        public List<string> PartitionKeysInTable { get; private set; }
+        public List<string> PartitionKeysInTable { get; } = new List<string>();
 
         /// <summary>
         ///     Runtime list of active partition schemas.
@@ -80,10 +77,8 @@ namespace AzureCloudTableContext.Api
         }
 
         /// <summary>
-        ///     Creates a new PartitionSchema for the <see cref="TDomainEntity" /> based on the given
-        ///     <param name="partitionKey"></param>
-        ///     .
-        ///     The PartitionSchema RowKey will be set based on the ID property of the <see cref="TDomainEntity" />.
+        ///     Creates a new PartitionSchema for the "TDomainEntity" based on the given partitionKey.
+        ///     The PartitionSchema RowKey will be set based on the ID property of the "TDomainEntity".
         /// </summary>
         /// <param name="partitionKey"></param>
         /// <returns></returns>
@@ -140,7 +135,8 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public string GetChronologicalBasedRowKey()
         {
-            return $"{(DateTimeOffset.UtcNow.Ticks):D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
+            var now = DateTimeOffset.UtcNow;
+            return $"{now.Ticks:D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
         }
 
         /// <summary>
@@ -149,12 +145,11 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public string GetReverseChronologicalBasedRowKey()
         {
-            return $"{(DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks):D20}_{Guid.NewGuid()}";
+            return $"{DateTimeOffset.MaxValue.Ticks - DateTimeOffset.UtcNow.Ticks:D20}_{Guid.NewGuid()}";
         }
 
         private void Init(CloudStorageAccount storageAccount, string propertyNameOfEntityId, string tableName)
         {
-            PartitionKeysInTable = new List<string>();
             NameOfEntityIdProperty = propertyNameOfEntityId;
             var tableClient = storageAccount.CreateCloudTableClient();
             _table = tableClient.GetTableReference(tableName);

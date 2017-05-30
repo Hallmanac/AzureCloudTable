@@ -1,18 +1,19 @@
 ﻿using Newtonsoft.Json;
 
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net;
+using System.Text;
+using System.Threading.Tasks;
+
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Table;
+using Microsoft.WindowsAzure.Storage.Table.Queryable;
+
 namespace AzureCloudTableContext.Api
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Net;
-    using System.Text;
-    using System.Threading.Tasks;
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Table;
-    using Microsoft.WindowsAzure.Storage.Table.Queryable;
-
     /// <summary>
     ///     Class that provides direct interaction to the current Azure Table through commonly used techniques.
     ///     Uses a generic object that implements the ITableEntity interface. This class can be used in
@@ -22,7 +23,7 @@ namespace AzureCloudTableContext.Api
     public class TableAccessContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {
         private CloudStorageAccount _storageAccount;
-        private CloudTable _table;
+
 
         public TableAccessContext(CloudStorageAccount storageAccount)
         {
@@ -39,7 +40,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         ///     Gets the current Azure Table being accessed.
         /// </summary>
-        public CloudTable Table { get { return _table; } }
+        public CloudTable Table { get; private set; }
 
         public ServicePoint TableServicePoint { get; set; }
 
@@ -57,13 +58,13 @@ namespace AzureCloudTableContext.Api
         public void InsertOrMerge(TAzureTableEntity tableEntity)
         {
             var updateOperation = TableOperation.InsertOrMerge(tableEntity);
-            _table.Execute(updateOperation);
+            Table.Execute(updateOperation);
         }
 
         public async Task InsertOrMergeAsync(TAzureTableEntity tableEntity)
         {
             var updateOperation = TableOperation.InsertOrMerge(tableEntity);
-            await _table.ExecuteAsync(updateOperation);
+            await Table.ExecuteAsync(updateOperation);
         }
 
         /// <summary>
@@ -91,7 +92,7 @@ namespace AzureCloudTableContext.Api
         public void InsertOrReplace(TAzureTableEntity tableEntity)
         {
             var updateOperation = TableOperation.InsertOrReplace(tableEntity);
-            _table.Execute(updateOperation);
+            Table.Execute(updateOperation);
         }
 
         /// <summary>
@@ -102,7 +103,7 @@ namespace AzureCloudTableContext.Api
         public async Task InsertOrReplaceAsync(TAzureTableEntity tableEntity)
         {
             var updateOperation = TableOperation.InsertOrReplace(tableEntity);
-            await _table.ExecuteAsync(updateOperation);
+            await Table.ExecuteAsync(updateOperation);
         }
 
         /// <summary>
@@ -137,7 +138,7 @@ namespace AzureCloudTableContext.Api
         public void Insert(TAzureTableEntity tableEntity)
         {
             var insertTableEntity = TableOperation.Insert(tableEntity);
-            _table.Execute(insertTableEntity);
+            Table.Execute(insertTableEntity);
         }
 
         /// <summary>
@@ -148,7 +149,7 @@ namespace AzureCloudTableContext.Api
         public async Task InsertAsync(TAzureTableEntity tableEntity)
         {
             var insertTableEntity = TableOperation.Insert(tableEntity);
-            await _table.ExecuteAsync(insertTableEntity);
+            await Table.ExecuteAsync(insertTableEntity);
         }
 
         /// <summary>
@@ -183,7 +184,7 @@ namespace AzureCloudTableContext.Api
         public void Delete(TAzureTableEntity tableEntity)
         {
             var deleteOperation = TableOperation.Delete(tableEntity);
-            _table.Execute(deleteOperation);
+            Table.Execute(deleteOperation);
         }
 
         /// <summary>
@@ -194,7 +195,7 @@ namespace AzureCloudTableContext.Api
         public async Task DeleteAsync(TAzureTableEntity tableEntity)
         {
             var deleteOperation = TableOperation.Delete(tableEntity);
-            await _table.ExecuteAsync(deleteOperation);
+            await Table.ExecuteAsync(deleteOperation);
         }
 
         /// <summary>
@@ -229,7 +230,7 @@ namespace AzureCloudTableContext.Api
         public void Replace(TAzureTableEntity tableEntity)
         {
             var replaceOperation = TableOperation.Delete(tableEntity);
-            _table.Execute(replaceOperation);
+            Table.Execute(replaceOperation);
         }
 
         /// <summary>
@@ -240,7 +241,7 @@ namespace AzureCloudTableContext.Api
         public async Task ReplaceAsync(TAzureTableEntity tableEntity)
         {
             var replaceOperation = TableOperation.Delete(tableEntity);
-            await _table.ExecuteAsync(replaceOperation);
+            await Table.ExecuteAsync(replaceOperation);
         }
 
         /// <summary>
@@ -293,7 +294,7 @@ namespace AzureCloudTableContext.Api
             Parallel.ForEach(batchPartitionPairs, pair =>
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
-                entityBatch.BatchList.ForEach(batchOp => _table.ExecuteBatch(batchOp));
+                entityBatch.BatchList.ForEach(batchOp => Table.ExecuteBatch(batchOp));
             });
         }
 
@@ -322,7 +323,7 @@ namespace AzureCloudTableContext.Api
             await Task.Run(() => Parallel.ForEach(batchPartitionPairs, async pair =>
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
-                var batchTasks = entityBatch.BatchList.Select(batchOp => _table.ExecuteBatchAsync(batchOp));
+                var batchTasks = entityBatch.BatchList.Select(batchOp => Table.ExecuteBatchAsync(batchOp));
                 await Task.WhenAll(batchTasks);
             }));
         }
@@ -335,7 +336,7 @@ namespace AzureCloudTableContext.Api
         /// <returns>TableQuery object</returns>
         public TableQuery<TAzureTableEntity> Query()
         {
-            return _table.CreateQuery<TAzureTableEntity>();
+            return Table.CreateQuery<TAzureTableEntity>();
         }
 
         /// <summary>
@@ -359,7 +360,7 @@ namespace AzureCloudTableContext.Api
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
-                currentQuerySegment = _table.ExecuteQuerySegmented(theQuery,
+                currentQuerySegment = Table.ExecuteQuerySegmented(theQuery,
                     currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
                 foreach(var entity in currentQuerySegment)
                 {
@@ -374,7 +375,7 @@ namespace AzureCloudTableContext.Api
             var returnList = new List<TAzureTableEntity>();
             while(querySegment == null || querySegment.ContinuationToken != null)
             {
-                querySegment = await _table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
+                querySegment = await Table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
                 returnList.AddRange(querySegment);
             }
             return returnList;
@@ -404,7 +405,7 @@ namespace AzureCloudTableContext.Api
             var returnList = new List<TAzureTableEntity>();
             while(querySegment == null || querySegment.ContinuationToken != null)
             {
-                querySegment = await _table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
+                querySegment = await Table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
                 foreach(var entity in querySegment)
                 {
                     if(customFilter(entity))
@@ -424,7 +425,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public TAzureTableEntity Find(string partitionKey, string rowKey)
         {
-            var retrieve = _table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
+            var retrieve = Table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
             var result = retrieve.Result;
             return (TAzureTableEntity)result;
             //return (TAzureTableEntity)_table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey)).Result;
@@ -438,8 +439,8 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public async Task<TAzureTableEntity> FindAsync(string partitionKey, string rowKey)
         {
-            var query = _table.CreateQuery<TAzureTableEntity>().Where(tEnt => tEnt.PartitionKey == partitionKey && tEnt.RowKey == rowKey);
-            var retrieved = await _table.ExecuteAsync(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
+            var query = Table.CreateQuery<TAzureTableEntity>().Where(tEnt => tEnt.PartitionKey == partitionKey && tEnt.RowKey == rowKey);
+            var retrieved = await Table.ExecuteAsync(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
             return (TAzureTableEntity)retrieved.Result;
         }
 
@@ -502,7 +503,7 @@ namespace AzureCloudTableContext.Api
             {
                 combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum}) {TableOperators.And} ({rKMinimum})";
             }
-            var query = _table.CreateQuery<TAzureTableEntity>().Where(combinedFilter);
+            var query = Table.CreateQuery<TAzureTableEntity>().Where(combinedFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -800,8 +801,8 @@ namespace AzureCloudTableContext.Api
             TableServicePoint.ConnectionLimit = 1000;
             UseBackgroundTaskForIndexing = false;
             var tableClient = storageAccount.CreateCloudTableClient();
-            _table = tableClient.GetTableReference(tableName);
-            _table.CreateIfNotExists();
+            Table = tableClient.GetTableReference(tableName);
+            Table.CreateIfNotExists();
         }
 
         internal class EntityBatch
