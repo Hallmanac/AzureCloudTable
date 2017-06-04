@@ -438,18 +438,17 @@ namespace AzureCloudTableContext.Api
 
         private void WritePartitionSchemasToTable(SaveType batchOperation)
         {
-            Parallel.ForEach(IndexDefinitions, schema =>
+            for (var i = 0; i < IndexDefinitions.Count; i++)
             {
-                if (schema.CloudTableEntities.Count > 0)
+                var indexDefinition = IndexDefinitions[i];
+                if (indexDefinition.CloudTableEntities.Count > 0)
                 {
-                    var entitiesArray = schema.CloudTableEntities.ToArray();
-                    switch (batchOperation)
-                    {
+                    var entitiesArray = indexDefinition.CloudTableEntities.ToArray();
+                    switch (batchOperation) {
                         case SaveType.InsertOrReplace:
                             TableAccessContext.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
-
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
                             TableAccessContext.InsertOrReplace(entitiesArray);
                             break;
@@ -462,27 +461,29 @@ namespace AzureCloudTableContext.Api
                         case SaveType.Delete:
                             TableAccessContext.Delete(entitiesArray);
                             break;
+                        default:
+                            throw new ArgumentOutOfRangeException(nameof(batchOperation), batchOperation, null);
                     }
                 }
-                schema.CloudTableEntities.Clear();
-            });
+                indexDefinition.CloudTableEntities.Clear();
+            }
         }
 
 
         private async Task WritePartitionSchemasToTableAsync(SaveType batchOperation)
         {
-            await Task.Run(() => Parallel.ForEach(IndexDefinitions, async schema =>
+            for (var i = 0; i < IndexDefinitions.Count; i++)
             {
-                if (schema.CloudTableEntities.Count > 0)
+                var indexDefinition = IndexDefinitions[i];
+                if (indexDefinition.CloudTableEntities.Count > 0)
                 {
-                    var entitiesArray = schema.CloudTableEntities.ToArray();
+                    var entitiesArray = indexDefinition.CloudTableEntities.ToArray();
                     switch (batchOperation)
                     {
                         case SaveType.InsertOrReplace:
                             await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
-
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
                             await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
                             break;
@@ -497,8 +498,8 @@ namespace AzureCloudTableContext.Api
                             break;
                     }
                 }
-                schema.CloudTableEntities.Clear();
-            }));
+                indexDefinition.CloudTableEntities.Clear();
+            }
         }
 
 
