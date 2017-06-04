@@ -71,13 +71,11 @@ namespace AzureCloudTableContext.Api
         /// <param name="operationContext">An <see cref="T:Microsoft.WindowsAzure.Storage.OperationContext" /> object that represents the context for the current operation.</param>
         public void ReadEntity(IDictionary<string, EntityProperty> properties, OperationContext operationContext)
         {
-            EntityProperty indexedEntityProperty;
-            EntityProperty domainObjType;
-            if (properties.TryGetValue(CtConstants.PropNameIndexedProperty, out indexedEntityProperty))
+            if (properties.TryGetValue(CtConstants.PropNameIndexedProperty, out EntityProperty indexedEntityProperty))
             {
                 IndexedProperty = JsonConvert.DeserializeObject<IndexedObject>(indexedEntityProperty.StringValue);
             }
-            if (properties.TryGetValue(CtConstants.PropNameDomainObjectType, out domainObjType))
+            if (properties.TryGetValue(CtConstants.PropNameDomainObjectType, out EntityProperty domainObjType))
             {
                 DomainObjectType = domainObjType.StringValue;
             }
