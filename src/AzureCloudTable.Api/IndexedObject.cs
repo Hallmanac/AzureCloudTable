@@ -1,10 +1,10 @@
 ﻿namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
-    /// Wraps the value being indexed in a CloudTableEntity.
+    /// Wraps the value being indexed in a TableEntityWrapper.
     /// 
     /// <para>
-    /// In order for the <see cref="CloudTableEntity{TDomainObject}"/> to always be able to properly serialize the 
+    /// In order for the <see cref="TableEntityWrapper{TDomainObject}"/> to always be able to properly serialize the 
     /// value of a property that is to be indexed, we have to wrap it inside a class. That's what this class is for.
     /// </para>
     /// </summary>

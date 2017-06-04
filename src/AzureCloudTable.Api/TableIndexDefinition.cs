@@ -57,7 +57,7 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
         /// <summary>
-        /// Called to set the RowKey of the CloudTableEntity prior to saving to the table.
+        /// Called to set the RowKey of the TableEntityWrapper prior to saving to the table.
         /// </summary>
         public Func<TDomainObject, string> GetRowKeyFromCriteria
         {
@@ -83,11 +83,11 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
         /// <summary>
-        /// Called to set the IndexedProperty of the CloudTableEntity prior to saving to the table.
+        /// Called to set the IndexedProperty of the TableEntityWrapper prior to saving to the table.
         /// </summary>
         public Func<TDomainObject, object> GetIndexedPropertyFromCriteria { get { return _getIndexedPropertyFromCriteria ?? (givenObj => ""); } }
 
-        internal List<CloudTableEntity<TDomainObject>> CloudTableEntities { get; set; } = new List<CloudTableEntity<TDomainObject>>();
+        internal List<TableEntityWrapper<TDomainObject>> CloudTableEntities { get; set; } = new List<TableEntityWrapper<TDomainObject>>();
 
         /// <summary>
         /// A string for a row key that provides a default ordering of oldest to newest.

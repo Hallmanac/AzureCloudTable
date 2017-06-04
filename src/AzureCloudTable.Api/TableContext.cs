@@ -22,10 +22,10 @@ namespace Hallmanac.AzureCloudTable.API
     /// <typeparam name="TDomainEntity"></typeparam>
     public class TableContext<TDomainEntity> where TDomainEntity : class, new()
     {
-        private readonly TableOperationsService<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
+        private readonly TableOperationsService<TableEntityWrapper<PartitionMetaData>> _tableMetaDataContext;
         private string _defaultIndexDefinitionName;
         private bool _needToRunTableIndices;
-        private CloudTableEntity<PartitionMetaData> _partitionMetaDataEntity;
+        private TableEntityWrapper<PartitionMetaData> _partitionMetaDataEntityWrapper;
 
 
         /// <summary>
@@ -43,16 +43,16 @@ namespace Hallmanac.AzureCloudTable.API
             var tableClient = storageAccount.CreateCloudTableClient();
             var table = tableClient.GetTableReference(tableName);
             table.CreateIfNotExists();
-            _tableMetaDataContext = new TableOperationsService<CloudTableEntity<PartitionMetaData>>(storageAccount, tableName);
+            _tableMetaDataContext = new TableOperationsService<TableEntityWrapper<PartitionMetaData>>(storageAccount, tableName);
             LoadTableMetaData();
-            TableOperationsService = new TableOperationsService<CloudTableEntity<TDomainEntity>>(storageAccount, tableName);
+            TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(storageAccount, tableName);
         }
 
 
         /// <summary>
         /// Gives direct access to the underlying TableAccessContext class that does the interaction with the Azure Table.
         /// </summary>
-        public TableOperationsService<CloudTableEntity<TDomainEntity>> TableOperationsService { get; }
+        public TableOperationsService<TableEntityWrapper<TDomainEntity>> TableOperationsService { get; }
 
         /// <summary>
         /// Gets a list of the index name keys that are used in the table.
@@ -84,7 +84,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// Returns a TableAccessContext class which allows for more options in constructing custom queries against the table.
         /// </summary>
         /// <returns></returns>
-        public TableQuery<CloudTableEntity<TDomainEntity>> TableQuery()
+        public TableQuery<TableEntityWrapper<TDomainEntity>> TableQuery()
         {
             return TableOperationsService.Query();
         }
@@ -170,19 +170,19 @@ namespace Hallmanac.AzureCloudTable.API
         private void LoadTableMetaData()
         {
             // Try to load the partition meta data from the existing table (which contains a list of the partition keys in the table).
-            _partitionMetaDataEntity = _tableMetaDataContext.Find(CtConstants.TableMetaDataPartitionKey, CtConstants.PartitionSchemasRowKey);
+            _partitionMetaDataEntityWrapper = _tableMetaDataContext.Find(CtConstants.TableMetaDataPartitionKey, CtConstants.PartitionSchemasRowKey);
 
             // Set the default PartitionKey using the combination below in case there are more than one CloudTableContext objects
             // on the same table.
             _defaultIndexDefinitionName = $"DefaultIndex_ofType_{typeof(TDomainEntity).Name}";
-            if (_partitionMetaDataEntity != null)
+            if (_partitionMetaDataEntityWrapper != null)
             {
                 /* This is going through and populating the local PartitionKeysInTable property with the list of keys retrieved
                  * from the Azure table.
                  * This also checks to see if there is a PartitionKey for the table meta data and the DefaultPartition
                  * and adds that if there isn't*/
                 var metaDataPkIsInList = false;
-                foreach (var partitionKeyString in _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys)
+                foreach (var partitionKeyString in _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys)
                 {
                     if (partitionKeyString == CtConstants.TableMetaDataPartitionKey)
                     {
@@ -218,7 +218,7 @@ namespace Hallmanac.AzureCloudTable.API
             else
             {
                 /* Creates a new partition meta data entity and adds the appropriate default partitions and metadata partitions*/
-                _partitionMetaDataEntity = new CloudTableEntity<PartitionMetaData>(CtConstants.TableMetaDataPartitionKey,
+                _partitionMetaDataEntityWrapper = new TableEntityWrapper<PartitionMetaData>(CtConstants.TableMetaDataPartitionKey,
                                                                                    CtConstants.PartitionSchemasRowKey);
                 DefaultIndex = CreateIndexDefinition(_defaultIndexDefinitionName)
                     .DefineIndexCriteria(entity => true)
@@ -228,22 +228,22 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
 
-        private void ValidateTableEntityAgainstIndexDefinitions(CloudTableEntity<TDomainEntity> tableEntity)
+        private void ValidateTableEntityAgainstIndexDefinitions(TableEntityWrapper<TDomainEntity> tableEntityWrapper)
         {
             foreach (var indexDefinition in IndexDefinitions)
             {
-                if (!indexDefinition.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
+                if (!indexDefinition.DomainObjectMatchesIndexCriteria(tableEntityWrapper.DomainObjectInstance))
                     continue;
-                var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
+                var tempTableEntity = new TableEntityWrapper<TDomainEntity>(domainObject: tableEntityWrapper.DomainObjectInstance)
                 {
                     PartitionKey = indexDefinition.IndexNameKey
                 };
 
                 // Checks if the current partition key has been registered with the list of partition keys for the table
-                if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
+                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys
                                             .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
                 {
-                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
+                    _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
                     SaveIndexNameKeys();
                 }
                 tempTableEntity.RowKey = indexDefinition.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
@@ -259,22 +259,22 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
 
-        private async Task ValidateTableEntityAgainstIndexDefinitionsAsync(CloudTableEntity<TDomainEntity> tableEntity)
+        private async Task ValidateTableEntityAgainstIndexDefinitionsAsync(TableEntityWrapper<TDomainEntity> tableEntityWrapper)
         {
             foreach (var partitionSchema in IndexDefinitions)
             {
-                if (!partitionSchema.DomainObjectMatchesIndexCriteria(tableEntity.DomainObjectInstance))
+                if (!partitionSchema.DomainObjectMatchesIndexCriteria(tableEntityWrapper.DomainObjectInstance))
                     continue;
-                var tempTableEntity = new CloudTableEntity<TDomainEntity>(domainObject: tableEntity.DomainObjectInstance)
+                var tempTableEntity = new TableEntityWrapper<TDomainEntity>(domainObject: tableEntityWrapper.DomainObjectInstance)
                 {
                     PartitionKey = partitionSchema.IndexNameKey
                 };
 
                 // Checks if the current partition key has been registered with the list of partition keys for the table
-                if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys
+                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys
                                             .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
                 {
-                    _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
+                    _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
                     await SaveIndexNameKeysAsync();
                 }
                 tempTableEntity.RowKey = partitionSchema.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
@@ -292,13 +292,13 @@ namespace Hallmanac.AzureCloudTable.API
 
         private void SaveIndexNameKeys()
         {
-            _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
+            _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntityWrapper);
         }
 
 
         private async Task SaveIndexNameKeysAsync()
         {
-            await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntity);
+            await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntityWrapper);
         }
 
 
@@ -308,7 +308,7 @@ namespace Hallmanac.AzureCloudTable.API
             RunTableIndexing();
             foreach (var domainEntity in domainEntities)
             {
-                var tempTableEntity = new CloudTableEntity<TDomainEntity>
+                var tempTableEntity = new TableEntityWrapper<TDomainEntity>
                 {
                     DomainObjectInstance = domainEntity
                 };
@@ -322,7 +322,7 @@ namespace Hallmanac.AzureCloudTable.API
         {
             await VerifyAllPartitionsExistAsync();
             await RunTableIndexingAsync();
-            foreach (var tempTableEntity in domainEntities.Select(domainEntity => new CloudTableEntity<TDomainEntity>
+            foreach (var tempTableEntity in domainEntities.Select(domainEntity => new TableEntityWrapper<TDomainEntity>
             {
                 DomainObjectInstance = domainEntity
             }))
@@ -337,7 +337,7 @@ namespace Hallmanac.AzureCloudTable.API
         {
             VerifyAllIndexDefinitionsExist();
             RunTableIndexing();
-            var tempTableEntity = new CloudTableEntity<TDomainEntity>
+            var tempTableEntity = new TableEntityWrapper<TDomainEntity>
             {
                 DomainObjectInstance = domainEntity
             };
@@ -350,7 +350,7 @@ namespace Hallmanac.AzureCloudTable.API
         {
             await VerifyAllPartitionsExistAsync();
             await RunTableIndexingAsync();
-            var tempTableEntity = new CloudTableEntity<TDomainEntity>
+            var tempTableEntity = new TableEntityWrapper<TDomainEntity>
             {
                 DomainObjectInstance = domainEntity
             };
@@ -367,9 +367,9 @@ namespace Hallmanac.AzureCloudTable.API
             for (var i = 0; i < IndexDefinitions.Count; i++)
             {
                 var schema = IndexDefinitions[i];
-                if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.IndexNameKey))
+                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Contains(schema.IndexNameKey))
                     continue;
-                _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.IndexNameKey);
+                _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Add(schema.IndexNameKey);
                 if (!IndexNameKeysInTable.Contains(schema.IndexNameKey))
                 {
                     IndexNameKeysInTable.Add(schema.IndexNameKey);
@@ -379,7 +379,7 @@ namespace Hallmanac.AzureCloudTable.API
             }
             if (shouldWriteToTable)
             {
-                _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntity);
+                _tableMetaDataContext.InsertOrReplace(_partitionMetaDataEntityWrapper);
             }
         }
 
@@ -392,9 +392,9 @@ namespace Hallmanac.AzureCloudTable.API
             for (var i = 0; i < IndexDefinitions.Count; i++)
             {
                 var schema = IndexDefinitions[i];
-                if (_partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Contains(schema.IndexNameKey))
+                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Contains(schema.IndexNameKey))
                     continue;
-                _partitionMetaDataEntity.DomainObjectInstance.PartitionKeys.Add(schema.IndexNameKey);
+                _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Add(schema.IndexNameKey);
                 if (!IndexNameKeysInTable.Contains(schema.IndexNameKey))
                 {
                     IndexNameKeysInTable.Add(schema.IndexNameKey);
@@ -404,7 +404,7 @@ namespace Hallmanac.AzureCloudTable.API
             }
             if (shouldWriteToTable)
             {
-                await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntity);
+                await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntityWrapper);
             }
         }
 
@@ -802,7 +802,7 @@ namespace Hallmanac.AzureCloudTable.API
 
 
         /// <summary>
-        /// Retrieves a List of domain <see cref="CloudTableEntity{TDomainObject}"/> based on a given Index Name (Azure table Partition Key) 
+        /// Retrieves a List of domain <see cref="TableEntityWrapper{TDomainObject}"/> based on a given Index Name (Azure table Partition Key) 
         /// and an optional RowKey range.
         /// </summary>
         /// <param name="indexNameKey">Name of index. Ultimately this is the Partition Key inside Azure Table Storage so if you wanted to get all indexed values
@@ -819,7 +819,7 @@ namespace Hallmanac.AzureCloudTable.API
 
 
         /// <summary>
-        /// Retrieves a List of domain <see cref="CloudTableEntity{TDomainObject}"/> based on a given Index Name (Azure table Partition Key) 
+        /// Retrieves a List of domain <see cref="TableEntityWrapper{TDomainObject}"/> based on a given Index Name (Azure table Partition Key) 
         /// and an optional RowKey range.
         /// </summary>
         /// <param name="indexNameKey">Name of index. Ultimately this is the Partition Key inside Azure Table Storage so if you wanted to get all indexed values
@@ -844,7 +844,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TDomainEntity> GetByIndexedProperty(string indexNameKey, object indexedProperty)
         {
-            var tempCloudTableEntity = new CloudTableEntity<TDomainEntity>
+            var tempCloudTableEntity = new TableEntityWrapper<TDomainEntity>
             {
                 IndexedProperty =
                 {
@@ -866,7 +866,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task<List<TDomainEntity>> GetByIndexedPropertyAsync(string indexDefinitionName, object indexedProperty)
         {
-            var tempCloudTableEntity = new CloudTableEntity<TDomainEntity>
+            var tempCloudTableEntity = new TableEntityWrapper<TDomainEntity>
             {
                 IndexedProperty =
                 {

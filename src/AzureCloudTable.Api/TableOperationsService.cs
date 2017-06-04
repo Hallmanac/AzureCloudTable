@@ -18,7 +18,7 @@ namespace Hallmanac.AzureCloudTable.API
     /// <summary>
     /// Class that provides direct (lower level) interaction to the current Azure Table through commonly used techniques.
     /// Uses a generic object that implements the ITableEntity interface. This class can be used in
-    /// conjunction with the CloudTableEntity class to wrap a POCO.
+    /// conjunction with the TableEntityWrapper class to wrap a POCO.
     /// </summary>
     /// <typeparam name="TAzureTableEntity"></typeparam>
     public class TableOperationsService<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()

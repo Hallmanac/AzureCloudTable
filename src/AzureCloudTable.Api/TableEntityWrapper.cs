@@ -14,13 +14,13 @@ namespace Hallmanac.AzureCloudTable.API
     ///     Wraps a POCO so that it can be stored directly into Azure Table Storage.
     /// </summary>
     /// <typeparam name="TDomainObject"></typeparam>
-    public class CloudTableEntity<TDomainObject> : ITableEntity where TDomainObject : class, new()
+    public class TableEntityWrapper<TDomainObject> : ITableEntity where TDomainObject : class, new()
     {
         /// <summary>
         /// Constructor will set a default partition key based on the type name of the TDomainObject and a default row
         /// key by subtracting the Max DateTimeOffset.Ticks from current DateTimeOffset.Ticks and appending a GUID.
         /// </summary>
-        public CloudTableEntity()
+        public TableEntityWrapper()
         {
             PartitionKey = SetDefaultPartitionKey();
             RowKey = SetDefaultRowKey();
@@ -35,7 +35,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="partitionKey">Sets the PartitionKey of the table entity.</param>
         /// <param name="rowKey">Sets the RowKey of the table entity.</param>
         /// <param name="domainObject">Sets the POCO that will be serialized to the table entity.</param>
-        public CloudTableEntity(string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
+        public TableEntityWrapper(string partitionKey = null, string rowKey = null, TDomainObject domainObject = null)
         {
             PartitionKey = partitionKey ?? SetDefaultPartitionKey();
             RowKey = rowKey ?? SetDefaultRowKey();
