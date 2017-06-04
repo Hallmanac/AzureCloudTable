@@ -138,7 +138,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// the JsonConvert.SerializeObject(...) serialization method from Json.Net.
         /// </param>
         /// <returns></returns>
-        public TableIndexDefinition<TDomainObject> SetCustomDefinitionForIndexedValue(Func<TDomainObject, string> givenRowKeyCriteria)
+        public TableIndexDefinition<TDomainObject> SetCustomDefinitionForRowKey(Func<TDomainObject, string> givenRowKeyCriteria)
         {
             _getRowKeyFromCriteria = givenRowKeyCriteria;
             return this;
