@@ -1,126 +1,131 @@
-﻿/*
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+
+using Hallmanac.AzureCloudTable.API;
+
+using Microsoft.Azure;
+using Microsoft.WindowsAzure.Storage;
+
 
 namespace Sample
 {
-    using Microsoft.WindowsAzure.Storage;
-    using Microsoft.WindowsAzure.Storage.Auth;
-
     public class UserRepository
     {
-        private const string AccountKey = "YourAccountKey";
+        private TableIndexDefinition<User> _firstNameIndex;
+        private TableIndexDefinition<User> _usersInFloridaIndex;
+        private TableIndexDefinition<User> _userTypeIndex;
+        private TableIndexDefinition<User> _userVersionIndex;
 
-        private const string AccountName = "YourAccountName";
+        //One could make this a public property to give direct query access
+        public TableContext<User> UserContext;
 
-        /*This is used as a dummy object to give access to the property names of a User type.
-         *If the User class was static, then there would be no need for this.
-         *This gets used in the constructor with the extension method called "GetPropertyName".#1#
-        private readonly User _tempUserInstance = new User();
-
-        private PartitionSchema<User> _usersInFloridaPartitionSchema;
-        private PartitionSchema<User> _userVersionPartitionSchema;
-        private PartitionSchema<User> _userTypePartitionSchema;
-        private PartitionSchema<User> _firstNamePartitionSchema;
-
-        //One could possibly make this a public property to give direct query access. Of course
-        //that sort of defeats the purpose of a repository but, hey, nobody's looking.
-        public CloudTableContext<User> UserContext;
 
         public UserRepository()
         {
-            var storageCredentials = new StorageCredentials(AccountName, AccountKey);
-            var storageAccount = new CloudStorageAccount(storageCredentials, true);
-            UserContext = new CloudTableContext<User>(storageAccount, "UserId");
-            // UserContext.UseBackgroundTaskForIndexing = false;
+            var connectionString = CloudConfigurationManager.GetSetting("AzureStorageConnectionString");
+            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            UserContext = new TableContext<User>(storageAccount, "UserId");
 
-            InitPartitionSchemas();
+            InitIndexDefinitions();
         }
 
-        /// <summary>
-        /// The partition schemas are how your domain object gets sorted/categorized/grouped inside Azure Table
-        /// storage. You create them in your client code and then "add" them to the CloudTableContext class
-        /// that you're using to interact with the Table (in this case _userContext). 
-        /// Remember, these are just schema definitions for one particular PartitionKey.
-        /// 
-        /// There is a DefaultSchema that get set on the CloudTableContext class automatically (in this case _userContext)
-        /// which sets the PartitionKey to be the name of the object Type and the RowKey based on the Id property of the object
-        /// provided during intialization.
-        /// </summary>
-        private void InitPartitionSchemas()
-        {
-            _usersInFloridaPartitionSchema = UserContext.CreatePartitionSchema()
-                                                        .SetPartitionKey("UsersInFlorida")
-                                                        .SetSchemaCriteria(user => user.UserAddress.State == "FL")
-                /*The RowKey is set to the ID property by default, which in this case is the user.UserId#1#
-                                                        .SetIndexedPropertyCriteria(user => user.UserAddress.State);
-
-            _firstNamePartitionSchema = UserContext.CreatePartitionSchema()
-                                                   .SetPartitionKey("FirstName")
-                                                   .SetSchemaCriteria(user => true)
-                /*The RowKey is set to the ID property by default, which in this case is the user.UserId#1#
-                                                   .SetIndexedPropertyCriteria(user => user.FirstName);
-
-            _userTypePartitionSchema = UserContext.CreatePartitionSchema()
-                                                  .SetPartitionKey("UserTypePartition")
-                                                  .SetSchemaCriteria(user => true)
-                /*The RowKey is set to the ID property by default, which in this case is the user.UserId#1#
-                                                  .SetIndexedPropertyCriteria(user => user.GetType().Name);
-
-            _userVersionPartitionSchema = UserContext.CreatePartitionSchema()
-                                                     .SetPartitionKey("UserVersionPartition")
-                                                     .SetSchemaCriteria(user => true)
-                                                     .SetRowKeyCriteria(user => UserContext.GetChronologicalBasedRowKey())
-                /*In this case we're keeping a version log so we want a new 
-                                                                                       RowKey created upon each write to the Table#1#
-                                                     .SetIndexedPropertyCriteria(user => user.UserId);
-
-            // Now add the schemas that were just created to the CloudTableContext<User> instance (i.e. _userContext).
-            UserContext.AddMultiplePartitionSchemas(new List<PartitionSchema<User>>
-            {
-                _usersInFloridaPartitionSchema,
-                _firstNamePartitionSchema,
-                _userTypePartitionSchema,
-                _userVersionPartitionSchema
-            });
-        }
 
         public List<User> GetAllUsers()
         {
-            return UserContext.GetByDefaultSchema().ToList();
+            return UserContext.GetAll().ToList();
         }
+
+
+        public async Task<List<User>> GetAllUsersAsync()
+        {
+            var users = await UserContext.GetAllAsync();
+            return users;
+        }
+
 
         public void Save(User user)
         {
             UserContext.InsertOrReplace(user);
         }
 
-        /*public void Save(Admin adminUser) { _userContext.InsertOrReplace(adminUser); }#1#
 
         public void Save(User[] users)
         {
             UserContext.InsertOrReplace(users);
         }
 
+
         public List<User> GetUsersThatLiveInFlorida()
         {
-            return UserContext.GetByPartitionKey(_usersInFloridaPartitionSchema.PartitionKey).ToList();
+            return UserContext.GetAllItemsFromIndex(_usersInFloridaIndex.IndexNameKey).ToList();
         }
 
-        public IEnumerable<User> GetUsersByFirstName(string firstName)
+
+        public List<User> GetUsersByFirstName(string firstName)
         {
-            return UserContext.GetByIndexedProperty(_firstNamePartitionSchema.PartitionKey, firstName).ToList();
+            return UserContext.GetByIndexedProperty(_firstNameIndex.IndexNameKey, firstName).ToList();
         }
+
 
         public List<User> GetUsersByTypeOfUser(string userType)
         {
-            return UserContext.GetByIndexedProperty(_userTypePartitionSchema.PartitionKey, userType).ToList();
+            return UserContext.GetByIndexedProperty(_userTypeIndex.IndexNameKey, userType).ToList();
         }
 
-    public IEnumerable<User> GetAllVersions(User givenUser)
+
+        public IEnumerable<User> GetAllVersions(User givenUser)
         {
-            return UserContext.GetByIndexedProperty(_userVersionPartitionSchema.PartitionKey, _userVersionPartitionSchema.GetIndexedPropertyFromCriteria(givenUser));
+            return UserContext.GetByIndexedProperty(_userVersionIndex.IndexNameKey,
+                                                    _userVersionIndex.GetIndexedPropertyFromCriteria(givenUser));
+        }
+
+
+        /// <summary>
+        /// The index definitions are how your domain object gets sorted/categorized/grouped inside Azure Table
+        /// storage. You create them in your client code and then "add" them to the TableContext class that you're using 
+        /// to interact with the Table (in this case _userContext). Remember, these are just index definitions for one 
+        /// particular partition or model type.
+        /// 
+        /// There is a DefaultIndex that is set on the TableContext class automatically (in this case _userContext)
+        /// which sets the IndexNameKey to be the name of the object Type and the Indexed value based on the Id property of the object
+        /// provided during intialization.
+        /// </summary>
+        private void InitIndexDefinitions()
+        {
+            _usersInFloridaIndex = UserContext.CreateIndexDefinition()
+                                                        .SetIndexNameKey("UsersInFloridaIdx")
+                                                        .DefineIndexCriteria(user => user != null && user.UserAddress.State == "FL")
+                                                        /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
+                                                        .SetIndexedPropertyCriteria(user => user?.UserAddress.State);
+
+            _firstNameIndex = UserContext.CreateIndexDefinition()
+                                                   .SetIndexNameKey("FirstNameIdx")
+                                                   .DefineIndexCriteria(user => user != null)
+                                                   /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
+                                                   .SetIndexedPropertyCriteria(user => user?.FirstName);
+
+            _userTypeIndex = UserContext.CreateIndexDefinition()
+                                                  .SetIndexNameKey("UserTypeIdx")
+                                                  .DefineIndexCriteria(user => user != null)
+                                                  /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
+                                                  .SetIndexedPropertyCriteria(user => user.IsAdmin ? "Admin" : "Standard");
+
+            _userVersionIndex = UserContext.CreateIndexDefinition()
+                                                     .SetIndexNameKey("UserVersionIdx")
+                                                     .DefineIndexCriteria(user => user != null)
+                                                     /*In this case we're keeping a version log so we want a new RowKey created upon each write to the Table*/
+                                                     .SetCustomDefinitionForRowKey(user => UserContext.GetChronologicalBasedRowKey())
+                                                     .SetIndexedPropertyCriteria(user => user?.UserId);
+
+            // Now add the index definitions that were just created to the TableContext<User> instance (i.e. UserContext).
+            UserContext.AddMultipleIndexDefinitions(new List<TableIndexDefinition<User>>
+            {
+                _usersInFloridaIndex,
+                _firstNameIndex,
+                _userTypeIndex,
+                _userVersionIndex
+            });
         }
     }
 }
-*/
