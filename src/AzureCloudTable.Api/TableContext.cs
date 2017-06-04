@@ -12,8 +12,12 @@ using Newtonsoft.Json;
 namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
-    /// Class used to wrap a domain entity for use with Azure Table Storage via using PartitionKey strategies (known as
-    /// PartitionSchemas) for grouping and filtering.
+    /// This is the primary class used in this library.
+    /// <para>
+    /// This class is used to provide high level interaction with Azure Table Storage. It allows for simply saving and retrieving 
+    /// or creating simple indexes to allow for easier and faster searching than using the conventional methods of interacting
+    /// with Azure table storage.
+    /// </para>
     /// </summary>
     /// <typeparam name="TDomainEntity"></typeparam>
     public class TableContext<TDomainEntity> where TDomainEntity : class, new()
