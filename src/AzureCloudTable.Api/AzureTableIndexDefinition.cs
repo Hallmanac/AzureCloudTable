@@ -22,7 +22,6 @@ namespace AzureCloudTableContext.Api
         /// <param name="nameOfIdProperty"></param>
         public AzureTableIndexDefinition(string nameOfIdProperty)
         {
-            CloudTableEntities = new List<CloudTableEntity<TDomainObject>>();
             NameOfIdProperty = nameOfIdProperty;
         }
 
@@ -86,7 +85,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         public Func<TDomainObject, object> GetIndexedPropertyFromCriteria { get { return _getIndexedPropertyFromCriteria ?? (givenObj => ""); } }
 
-        internal List<CloudTableEntity<TDomainObject>> CloudTableEntities { get; set; }
+        internal List<CloudTableEntity<TDomainObject>> CloudTableEntities { get; set; } = new List<CloudTableEntity<TDomainObject>>();
 
         /// <summary>
         /// A string for a row key that provides a default ordering of oldest to newest.
