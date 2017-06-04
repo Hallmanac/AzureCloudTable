@@ -16,7 +16,7 @@ namespace AzureCloudTableContext.Api
     /// PartitionSchemas) for grouping and filtering.
     /// </summary>
     /// <typeparam name="TDomainEntity"></typeparam>
-    public class CloudTableContext<TDomainEntity> where TDomainEntity : class, new()
+    public class TableContext<TDomainEntity> where TDomainEntity : class, new()
     {
         private readonly TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
         private string _defaultIndexDefinitionName;
@@ -32,7 +32,7 @@ namespace AzureCloudTableContext.Api
         /// <param name="storageAccount"></param>
         /// <param name="nameOfEntityIdProperty"></param>
         /// <param name="tableName"></param>
-        public CloudTableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName = null)
+        public TableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName = null)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TDomainEntity).Name}Table" : tableName;
             NameOfEntityIdProperty = nameOfEntityIdProperty;
@@ -112,7 +112,7 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        /// Adds multiple Index Definitions types to the current <see cref="CloudTableContext{TDomainEntity}"/>.
+        /// Adds multiple Index Definitions types to the current <see cref="TableContext{TDomainEntity}"/>.
         /// </summary>
         /// <param name="indexDefinitions"></param>
         public void AddMultipleIndexDefinitions(List<TableIndexDefinition<TDomainEntity>> indexDefinitions)
@@ -129,7 +129,7 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        /// Adds a single Index Definition to the current <see cref="CloudTableContext{TDomainEntity}"/>.
+        /// Adds a single Index Definition to the current <see cref="TableContext{TDomainEntity}"/>.
         /// </summary>
         /// <param name="tableIndexDefinition"></param>
         public void AddIndexDefinition(TableIndexDefinition<TDomainEntity> tableIndexDefinition)
