@@ -72,7 +72,7 @@
     <Compile Include="CloudTableEntity.cs" />
     <Compile Include="CtConstants.cs" />
     <Compile Include="IndexedObject.cs" />
-    <Compile Include="AzureTableIndexDefinition.cs" />
+    <Compile Include="TableIndexDefinition.cs" />
     <Compile Include="SaveType.cs" />
     <Compile Include="TableAccessContext.cs" />
     <Compile Include="CloudTableContext.cs" />
