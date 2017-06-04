@@ -7,7 +7,7 @@ using Newtonsoft.Json;
 namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
-    ///     Class that defines a partitioning strategy to store a domain entity in Azure Table Storage.
+    ///     Class that defines an index strategy to store a domain entity in Azure Table Storage.
     /// </summary>
     /// <typeparam name="TDomainObject">The POCO class that is being written to Azure Table Storage</typeparam>
     public class TableIndexDefinition<TDomainObject> where TDomainObject : class, new()
@@ -48,7 +48,7 @@ namespace Hallmanac.AzureCloudTable.API
         public string NameOfIdProperty { get; }
 
         /// <summary>
-        /// Called to verify whether or not the given domain entity meets the requirements to be in the current PartitionSchema.
+        /// Called to verify whether or not the given domain entity meets the requirements to be in the current TableIndexDefinition.
         /// Default is to return true.
         /// </summary>
         public Func<TDomainObject, bool> DomainObjectMatchesIndexCriteria

@@ -50,7 +50,7 @@ namespace Hallmanac.AzureCloudTable.API
 
 
         /// <summary>
-        /// Gives direct access to the underlying TableAccessContext class that does the interaction with the Azure Table.
+        /// Gives direct access to the underlying TableOperationsService class that does the interaction with the Azure Table.
         /// </summary>
         public TableOperationsService<TableEntityWrapper<TDomainEntity>> TableOperationsService { get; }
 
@@ -81,7 +81,7 @@ namespace Hallmanac.AzureCloudTable.API
 
 
         /// <summary>
-        /// Returns a TableAccessContext class which allows for more options in constructing custom queries against the table.
+        /// Returns a TableOperationsService class which allows for more options in constructing custom queries against the table.
         /// </summary>
         /// <returns></returns>
         public TableQuery<TableEntityWrapper<TDomainEntity>> TableQuery()
