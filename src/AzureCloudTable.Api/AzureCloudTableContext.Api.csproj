@@ -74,7 +74,7 @@
     <Compile Include="IndexedObject.cs" />
     <Compile Include="TableIndexDefinition.cs" />
     <Compile Include="SaveType.cs" />
-    <Compile Include="TableAccessContext.cs" />
+    <Compile Include="TableOperationsService.cs" />
     <Compile Include="TableContext.cs" />
     <Compile Include="ExtensionMethods.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
