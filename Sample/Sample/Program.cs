@@ -1,11 +1,11 @@
-﻿namespace Sample
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
+
+namespace Sample
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Net;
-    using ServiceStack.Text;
 
     internal class Program
     {
@@ -14,7 +14,7 @@
             var sw = new Stopwatch();
             var listOfUsers = new List<User>();
 
-            #region First Test
+            /*#region First Test
             var adminUser = new List<Admin>();
             Console.WriteLine("Initializing User Repo...");
             sw.Start();
@@ -106,7 +106,7 @@
                 {
                     var userItem = string.Format("{0}", JsonSerializer.SerializeToString(user, user.GetType()));
                     Console.WriteLine("{0}", userItem.SerializeAndFormat());
-                }*/
+                }#1#
                 Console.WriteLine("Number of users retrieved is {0}\n", allUsersGotten.Count);
                 Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
                 sw.Reset();
@@ -118,8 +118,8 @@
                 /*foreach(var existingUser in existingUsers)
                 {
                     Console.WriteLine("{0}", JsonSerializer.SerializeToString(existingUser, existingUser.GetType()));
-                }*/
-                /*Console.WriteLine("All Users listed above.");*/
+                }#1#
+                /*Console.WriteLine("All Users listed above.");#1#
                 
                 Console.WriteLine("Changing State property on users (except those in FL)...");
                 sw.Start();
@@ -158,7 +158,7 @@
                 {
                     adminUser.Add((Admin)user);
                 }
-            }*/
+            }#1#
             var retrievedAdmins = userRepo.GetUsersByTypeOfUser("Admin");
             adminUser.AddRange(retrievedAdmins.ConvertAll(usr => (Admin)usr));
             sw.Stop();
@@ -215,9 +215,9 @@
                 Console.WriteLine("\nTime to complete query was {0} milliseconds.", elapsedTime.ToString());
                 Console.WriteLine("Press enter to continue...");
                 Console.ReadLine();
-            }*/
+            }#1#
             Console.ReadLine();
-            #endregion
+            #endregion*/
         }
     }
 }

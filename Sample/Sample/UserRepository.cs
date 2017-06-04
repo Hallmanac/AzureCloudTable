@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿/*
+using System.Collections.Generic;
 using System.Linq;
-using AzureCloudTableContext.Api;
 
 namespace Sample
 {
@@ -15,7 +15,7 @@ namespace Sample
 
         /*This is used as a dummy object to give access to the property names of a User type.
          *If the User class was static, then there would be no need for this.
-         *This gets used in the constructor with the extension method called "GetPropertyName".*/
+         *This gets used in the constructor with the extension method called "GetPropertyName".#1#
         private readonly User _tempUserInstance = new User();
 
         private PartitionSchema<User> _usersInFloridaPartitionSchema;
@@ -52,19 +52,19 @@ namespace Sample
             _usersInFloridaPartitionSchema = UserContext.CreatePartitionSchema()
                                                         .SetPartitionKey("UsersInFlorida")
                                                         .SetSchemaCriteria(user => user.UserAddress.State == "FL")
-                /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
+                /*The RowKey is set to the ID property by default, which in this case is the user.UserId#1#
                                                         .SetIndexedPropertyCriteria(user => user.UserAddress.State);
 
             _firstNamePartitionSchema = UserContext.CreatePartitionSchema()
                                                    .SetPartitionKey("FirstName")
                                                    .SetSchemaCriteria(user => true)
-                /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
+                /*The RowKey is set to the ID property by default, which in this case is the user.UserId#1#
                                                    .SetIndexedPropertyCriteria(user => user.FirstName);
 
             _userTypePartitionSchema = UserContext.CreatePartitionSchema()
                                                   .SetPartitionKey("UserTypePartition")
                                                   .SetSchemaCriteria(user => true)
-                /*The RowKey is set to the ID property by default, which in this case is the user.UserId*/
+                /*The RowKey is set to the ID property by default, which in this case is the user.UserId#1#
                                                   .SetIndexedPropertyCriteria(user => user.GetType().Name);
 
             _userVersionPartitionSchema = UserContext.CreatePartitionSchema()
@@ -72,7 +72,7 @@ namespace Sample
                                                      .SetSchemaCriteria(user => true)
                                                      .SetRowKeyCriteria(user => UserContext.GetChronologicalBasedRowKey())
                 /*In this case we're keeping a version log so we want a new 
-                                                                                       RowKey created upon each write to the Table*/
+                                                                                       RowKey created upon each write to the Table#1#
                                                      .SetIndexedPropertyCriteria(user => user.UserId);
 
             // Now add the schemas that were just created to the CloudTableContext<User> instance (i.e. _userContext).
@@ -95,7 +95,7 @@ namespace Sample
             UserContext.InsertOrReplace(user);
         }
 
-        /*public void Save(Admin adminUser) { _userContext.InsertOrReplace(adminUser); }*/
+        /*public void Save(Admin adminUser) { _userContext.InsertOrReplace(adminUser); }#1#
 
         public void Save(User[] users)
         {
@@ -123,3 +123,4 @@ namespace Sample
         }
     }
 }
+*/
