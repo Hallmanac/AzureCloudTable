@@ -8,7 +8,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 
 
-namespace AzureCloudTableContext.Api
+namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     ///     Wraps a POCO so that it can be stored directly into Azure Table Storage.

@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,7 +10,10 @@ using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Table;
 using Microsoft.WindowsAzure.Storage.Table.Queryable;
 
-namespace AzureCloudTableContext.Api
+using Newtonsoft.Json;
+
+
+namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     /// Class that provides direct (lower level) interaction to the current Azure Table through commonly used techniques.

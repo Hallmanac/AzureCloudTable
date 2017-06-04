@@ -1,4 +1,4 @@
-﻿namespace AzureCloudTableContext.Api
+﻿namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     /// Enum for the different types of Table write operations.

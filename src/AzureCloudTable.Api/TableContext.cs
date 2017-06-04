@@ -9,7 +9,7 @@ using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 
 
-namespace AzureCloudTableContext.Api
+namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     /// Class used to wrap a domain entity for use with Azure Table Storage via using PartitionKey strategies (known as

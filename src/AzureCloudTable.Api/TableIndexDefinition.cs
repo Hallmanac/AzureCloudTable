@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+
 using Newtonsoft.Json;
 
-namespace AzureCloudTableContext.Api
+
+namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     ///     Class that defines a partitioning strategy to store a domain entity in Azure Table Storage.

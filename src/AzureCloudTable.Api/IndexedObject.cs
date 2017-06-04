@@ -1,4 +1,4 @@
-﻿namespace AzureCloudTableContext.Api
+﻿namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     /// Wraps the value being indexed in a CloudTableEntity.
