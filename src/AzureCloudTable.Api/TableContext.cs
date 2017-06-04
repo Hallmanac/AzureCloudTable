@@ -18,7 +18,7 @@ namespace AzureCloudTableContext.Api
     /// <typeparam name="TDomainEntity"></typeparam>
     public class TableContext<TDomainEntity> where TDomainEntity : class, new()
     {
-        private readonly TableAccessContext<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
+        private readonly TableOperationsService<CloudTableEntity<PartitionMetaData>> _tableMetaDataContext;
         private string _defaultIndexDefinitionName;
         private bool _needToRunTableIndices;
         private CloudTableEntity<PartitionMetaData> _partitionMetaDataEntity;
@@ -39,16 +39,16 @@ namespace AzureCloudTableContext.Api
             var tableClient = storageAccount.CreateCloudTableClient();
             var table = tableClient.GetTableReference(tableName);
             table.CreateIfNotExists();
-            _tableMetaDataContext = new TableAccessContext<CloudTableEntity<PartitionMetaData>>(storageAccount, tableName);
+            _tableMetaDataContext = new TableOperationsService<CloudTableEntity<PartitionMetaData>>(storageAccount, tableName);
             LoadTableMetaData();
-            TableAccessContext = new TableAccessContext<CloudTableEntity<TDomainEntity>>(storageAccount, tableName);
+            TableOperationsService = new TableOperationsService<CloudTableEntity<TDomainEntity>>(storageAccount, tableName);
         }
 
 
         /// <summary>
         /// Gives direct access to the underlying TableAccessContext class that does the interaction with the Azure Table.
         /// </summary>
-        public TableAccessContext<CloudTableEntity<TDomainEntity>> TableAccessContext { get; }
+        public TableOperationsService<CloudTableEntity<TDomainEntity>> TableOperationsService { get; }
 
         /// <summary>
         /// Gets a list of the index name keys that are used in the table.
@@ -82,7 +82,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public TableQuery<CloudTableEntity<TDomainEntity>> TableQuery()
         {
-            return TableAccessContext.Query();
+            return TableOperationsService.Query();
         }
 
 
@@ -445,20 +445,20 @@ namespace AzureCloudTableContext.Api
                     var entitiesArray = indexDefinition.CloudTableEntities.ToArray();
                     switch (batchOperation) {
                         case SaveType.InsertOrReplace:
-                            TableAccessContext.InsertOrReplace(entitiesArray);
+                            TableOperationsService.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
-                            TableAccessContext.InsertOrReplace(entitiesArray);
+                            TableOperationsService.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.Insert:
-                            TableAccessContext.Insert(entitiesArray);
+                            TableOperationsService.Insert(entitiesArray);
                             break;
                         case SaveType.Replace:
-                            TableAccessContext.Replace(entitiesArray);
+                            TableOperationsService.Replace(entitiesArray);
                             break;
                         case SaveType.Delete:
-                            TableAccessContext.Delete(entitiesArray);
+                            TableOperationsService.Delete(entitiesArray);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(nameof(batchOperation), batchOperation, null);
@@ -480,20 +480,20 @@ namespace AzureCloudTableContext.Api
                     switch (batchOperation)
                     {
                         case SaveType.InsertOrReplace:
-                            await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
+                            await TableOperationsService.InsertOrReplaceAsync(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
-                            await TableAccessContext.InsertOrReplaceAsync(entitiesArray);
+                            await TableOperationsService.InsertOrReplaceAsync(entitiesArray);
                             break;
                         case SaveType.Insert:
-                            await TableAccessContext.InsertAsync(entitiesArray);
+                            await TableOperationsService.InsertAsync(entitiesArray);
                             break;
                         case SaveType.Replace:
-                            await TableAccessContext.ReplaceAsync(entitiesArray);
+                            await TableOperationsService.ReplaceAsync(entitiesArray);
                             break;
                         case SaveType.Delete:
-                            await TableAccessContext.DeleteAsync(entitiesArray);
+                            await TableOperationsService.DeleteAsync(entitiesArray);
                             break;
                     }
                 }
@@ -696,7 +696,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public IEnumerable<TDomainEntity> GetAll()
         {
-            return TableAccessContext.GetByPartitionKey(_defaultIndexDefinitionName)
+            return TableOperationsService.GetByPartitionKey(_defaultIndexDefinitionName)
                                      .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
@@ -708,7 +708,7 @@ namespace AzureCloudTableContext.Api
         /// <returns></returns>
         public async Task<List<TDomainEntity>> GetAllAsync()
         {
-            var partition = await TableAccessContext.GetByPartitionKeyAsync(_defaultIndexDefinitionName);
+            var partition = await TableOperationsService.GetByPartitionKeyAsync(_defaultIndexDefinitionName);
             return partition.Select(cte => cte.DomainObjectInstance).ToList();
         }
 
@@ -731,7 +731,7 @@ namespace AzureCloudTableContext.Api
             {
                 indexNameKey = DefaultIndex.IndexNameKey;
             }
-            var tableEntity = TableAccessContext.Find(indexNameKey, serializedEntityId);
+            var tableEntity = TableOperationsService.Find(indexNameKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
@@ -754,7 +754,7 @@ namespace AzureCloudTableContext.Api
             {
                 indexNameKey = DefaultIndex.IndexNameKey;
             }
-            var tableEntity = await TableAccessContext.FindAsync(indexNameKey, serializedEntityId);
+            var tableEntity = await TableOperationsService.FindAsync(indexNameKey, serializedEntityId);
             return tableEntity.DomainObjectInstance;
         }
 
@@ -769,12 +769,12 @@ namespace AzureCloudTableContext.Api
             if (indexKey is string key)
             {
                 return
-                    TableAccessContext.GetByPartitionKey(key)
+                    TableOperationsService.GetByPartitionKey(key)
                                       .Select(tableEntity => tableEntity.DomainObjectInstance);
             }
             var serializedPartitionKey = JsonConvert.SerializeObject(indexKey);
             return
-                TableAccessContext.GetByPartitionKey(serializedPartitionKey)
+                TableOperationsService.GetByPartitionKey(serializedPartitionKey)
                                   .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
@@ -788,11 +788,11 @@ namespace AzureCloudTableContext.Api
         {
             if (indexKey is string key)
             {
-                var entities = await TableAccessContext.GetByPartitionKeyAsync(key);
+                var entities = await TableOperationsService.GetByPartitionKeyAsync(key);
                 return entities.Select(tableEntity => tableEntity.DomainObjectInstance).ToList();
             }
             var serializedPartitionKey = JsonConvert.SerializeObject(indexKey);
-            var ents = await TableAccessContext.GetByPartitionKeyAsync(serializedPartitionKey);
+            var ents = await TableOperationsService.GetByPartitionKeyAsync(serializedPartitionKey);
             return ents.Select(azureTableEntity => azureTableEntity.DomainObjectInstance).ToList();
         }
 
@@ -809,7 +809,7 @@ namespace AzureCloudTableContext.Api
         public IEnumerable<TDomainEntity> GetFromIndexWithinValueRange(string indexNameKey, string minIndexedValue = "", string maxIndexedValue = "")
         {
             return
-                TableAccessContext.GetByPartitionKeyWithRowKeyRange(indexNameKey, minIndexedValue, maxIndexedValue)
+                TableOperationsService.GetByPartitionKeyWithRowKeyRange(indexNameKey, minIndexedValue, maxIndexedValue)
                                   .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
@@ -827,7 +827,7 @@ namespace AzureCloudTableContext.Api
                                                                                  string minIndexedValue = "",
                                                                                  string maxIndexedValue = "")
         {
-            var entites = await TableAccessContext.GetByPartitionKeyWithRowKeyRangeAsync(indexNameKey, minIndexedValue, maxIndexedValue);
+            var entites = await TableOperationsService.GetByPartitionKeyWithRowKeyRangeAsync(indexNameKey, minIndexedValue, maxIndexedValue);
             return entites.Select(ent => ent.DomainObjectInstance).ToList();
         }
 
@@ -848,7 +848,7 @@ namespace AzureCloudTableContext.Api
                 }
             };
             var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
-            return TableAccessContext.QueryWherePropertyEquals(indexNameKey,
+            return TableOperationsService.QueryWherePropertyEquals(indexNameKey,
                                                                CtConstants.PropNameIndexedProperty, serializedIndexedProperty)
                                      .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
@@ -871,7 +871,7 @@ namespace AzureCloudTableContext.Api
             };
             var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
             var entities =
-                await TableAccessContext.QueryWherePropertyEqualsAsync(indexDefinitionName, CtConstants.PropNameIndexedProperty,
+                await TableOperationsService.QueryWherePropertyEqualsAsync(indexDefinitionName, CtConstants.PropNameIndexedProperty,
                                                                        serializedIndexedProperty);
             return entities.Select(cte => cte.DomainObjectInstance).ToList();
         }

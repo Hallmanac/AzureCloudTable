@@ -15,30 +15,40 @@ using Microsoft.WindowsAzure.Storage.Table.Queryable;
 namespace AzureCloudTableContext.Api
 {
     /// <summary>
-    ///     Class that provides direct interaction to the current Azure Table through commonly used techniques.
-    ///     Uses a generic object that implements the ITableEntity interface. This class can be used in
-    ///     conjunction with the CloudTableEntity class to wrap a POCO.
+    /// Class that provides direct (lower level) interaction to the current Azure Table through commonly used techniques.
+    /// Uses a generic object that implements the ITableEntity interface. This class can be used in
+    /// conjunction with the CloudTableEntity class to wrap a POCO.
     /// </summary>
     /// <typeparam name="TAzureTableEntity"></typeparam>
-    public class TableAccessContext<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
+    public class TableOperationsService<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
     {
         private CloudStorageAccount _storageAccount;
 
 
-        public TableAccessContext(CloudStorageAccount storageAccount)
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the type name
+        /// of the TAzureTableEntity
+        /// </summary>
+        /// <param name="storageAccount"></param>
+        public TableOperationsService(CloudStorageAccount storageAccount)
         {
             var tableName = $"{typeof(TAzureTableEntity).Name}Table";
             InitTableAccess(storageAccount, tableName);
         }
 
-        public TableAccessContext(CloudStorageAccount storageAccount, string tableName)
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// </summary>
+        /// <param name="storageAccount"></param>
+        /// <param name="tableName"></param>
+        public TableOperationsService(CloudStorageAccount storageAccount, string tableName)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
             InitTableAccess(storageAccount, tableName);
         }
 
         /// <summary>
-        ///     Gets the current Azure Table being accessed.
+        /// Gets the current Azure Table being accessed.
         /// </summary>
         public CloudTable Table { get; private set; }
 
