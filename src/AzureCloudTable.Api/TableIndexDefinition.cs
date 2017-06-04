@@ -8,7 +8,7 @@ namespace AzureCloudTableContext.Api
     ///     Class that defines a partitioning strategy to store a domain entity in Azure Table Storage.
     /// </summary>
     /// <typeparam name="TDomainObject">The POCO class that is being written to Azure Table Storage</typeparam>
-    public class AzureTableIndexDefinition<TDomainObject> where TDomainObject : class, new()
+    public class TableIndexDefinition<TDomainObject> where TDomainObject : class, new()
     {
         private Func<TDomainObject, object> _getIndexedPropertyFromCriteria;
         private Func<TDomainObject, string> _getRowKeyFromCriteria;
@@ -20,7 +20,7 @@ namespace AzureCloudTableContext.Api
         /// the ID of the domain object.
         /// </summary>
         /// <param name="nameOfIdProperty"></param>
-        public AzureTableIndexDefinition(string nameOfIdProperty)
+        public TableIndexDefinition(string nameOfIdProperty)
         {
             NameOfIdProperty = nameOfIdProperty;
         }
@@ -107,7 +107,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenPartitionKey"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> SetIndexNameKey(string givenPartitionKey)
+        public TableIndexDefinition<TDomainObject> SetIndexNameKey(string givenPartitionKey)
         {
             _indexNameKey = givenPartitionKey;
             return this;
@@ -118,7 +118,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenCriteria"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> DefineIndexCriteria(Func<TDomainObject, bool> givenCriteria)
+        public TableIndexDefinition<TDomainObject> DefineIndexCriteria(Func<TDomainObject, bool> givenCriteria)
         {
             _indexCriteriaMethod = givenCriteria;
             return this;
@@ -136,7 +136,7 @@ namespace AzureCloudTableContext.Api
         /// the JsonConvert.SerializeObject(...) serialization method from Json.Net.
         /// </param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> SetCustomDefinitionForIndexedValue(Func<TDomainObject, string> givenRowKeyCriteria)
+        public TableIndexDefinition<TDomainObject> SetCustomDefinitionForIndexedValue(Func<TDomainObject, string> givenRowKeyCriteria)
         {
             _getRowKeyFromCriteria = givenRowKeyCriteria;
             return this;
@@ -147,7 +147,7 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="givenIndexedPropCriteria"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainObject> SetIndexedPropertyCriteria(Func<TDomainObject, object> givenIndexedPropCriteria)
+        public TableIndexDefinition<TDomainObject> SetIndexedPropertyCriteria(Func<TDomainObject, object> givenIndexedPropCriteria)
         {
             _getIndexedPropertyFromCriteria = givenIndexedPropCriteria;
             return this;

@@ -58,7 +58,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Runtime list of active partition schemas.
         /// </summary>
-        public List<AzureTableIndexDefinition<TDomainEntity>> IndexDefinitions { get; set; } = new List<AzureTableIndexDefinition<TDomainEntity>>();
+        public List<TableIndexDefinition<TDomainEntity>> IndexDefinitions { get; set; } = new List<TableIndexDefinition<TDomainEntity>>();
 
         /// <summary>
         /// This is the name of the property that is used to store the ID of the Domain Entity.
@@ -73,7 +73,7 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Gets the default index definition used for the table.
         /// </summary>
-        public AzureTableIndexDefinition<TDomainEntity> DefaultIndex { get; private set; }
+        public TableIndexDefinition<TDomainEntity> DefaultIndex { get; private set; }
 
 
         /// <summary>
@@ -92,9 +92,9 @@ namespace AzureCloudTableContext.Api
         /// </summary>
         /// <param name="indexName"></param>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainEntity> CreateIndexDefinition(string indexName)
+        public TableIndexDefinition<TDomainEntity> CreateIndexDefinition(string indexName)
         {
-            var schema = new AzureTableIndexDefinition<TDomainEntity>(NameOfEntityIdProperty)
+            var schema = new TableIndexDefinition<TDomainEntity>(NameOfEntityIdProperty)
                 .SetIndexNameKey(indexName);
             return schema;
         }
@@ -105,7 +105,7 @@ namespace AzureCloudTableContext.Api
         /// the name of the type by default. The index definition's indexed value will be set based on the ID property of the {TDomainEntity}.
         /// </summary>
         /// <returns></returns>
-        public AzureTableIndexDefinition<TDomainEntity> CreateIndexDefinition()
+        public TableIndexDefinition<TDomainEntity> CreateIndexDefinition()
         {
             return CreateIndexDefinition(typeof(TDomainEntity).Name);
         }
@@ -115,7 +115,7 @@ namespace AzureCloudTableContext.Api
         /// Adds multiple Index Definitions types to the current <see cref="CloudTableContext{TDomainEntity}"/>.
         /// </summary>
         /// <param name="indexDefinitions"></param>
-        public void AddMultipleIndexDefinitions(List<AzureTableIndexDefinition<TDomainEntity>> indexDefinitions)
+        public void AddMultipleIndexDefinitions(List<TableIndexDefinition<TDomainEntity>> indexDefinitions)
         {
             foreach (var indexDefinition in indexDefinitions)
             {
@@ -131,14 +131,14 @@ namespace AzureCloudTableContext.Api
         /// <summary>
         /// Adds a single Index Definition to the current <see cref="CloudTableContext{TDomainEntity}"/>.
         /// </summary>
-        /// <param name="azureTableIndexDefinition"></param>
-        public void AddIndexDefinition(AzureTableIndexDefinition<TDomainEntity> azureTableIndexDefinition)
+        /// <param name="tableIndexDefinition"></param>
+        public void AddIndexDefinition(TableIndexDefinition<TDomainEntity> tableIndexDefinition)
         {
-            if (IndexDefinitions.Any(indexDef => indexDef.IndexNameKey == azureTableIndexDefinition.IndexNameKey))
+            if (IndexDefinitions.Any(indexDef => indexDef.IndexNameKey == tableIndexDefinition.IndexNameKey))
             {
                 return;
             }
-            IndexDefinitions.Add(azureTableIndexDefinition);
+            IndexDefinitions.Add(tableIndexDefinition);
         }
 
 
