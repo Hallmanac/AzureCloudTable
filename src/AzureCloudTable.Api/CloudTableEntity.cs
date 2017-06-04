@@ -29,7 +29,7 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        ///  If the parameters are null, the constructor will set a default partition key based on the type name of the TDomainObject and a default row
+        /// If the parameters are null, the constructor will set a default partition key based on the type name of the TDomainObject and a default row
         /// key by subtracting the Max DateTimeOffset.Ticks from current DateTimeOffset.Ticks and appending a GUID.
         /// </summary>
         /// <param name="partitionKey">Sets the PartitionKey of the table entity.</param>
@@ -113,7 +113,7 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        ///     Instance of the object that is ultimately getting saved to Table Storage
+        /// Instance of the object that is ultimately getting saved to Table Storage
         /// </summary>
         public TDomainObject DomainObjectInstance { get; set; }
 
@@ -138,9 +138,9 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        ///     Sets the value of the RowKey for the table entity as a padded integer based on the difference of
-        ///     the max value property of the DateTimeOffset and the DateTimeOffset.UtcNow property, followed by an
-        ///     underscore and an random generated GUID.
+        /// Sets the value of the RowKey for the table entity as a padded integer based on the difference of
+        /// the max value property of the DateTimeOffset and the DateTimeOffset.UtcNow property, followed by an
+        /// underscore and an random generated GUID.
         /// </summary>
         /// <returns></returns>
         public string SetDefaultRowKey()
@@ -151,7 +151,7 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        ///     Sets the default value of the PartitionKey for the table entity as a random generated GUID.
+        /// Sets the default value of the PartitionKey for the table entity as a random generated GUID.
         /// </summary>
         /// <returns></returns>
         public string SetDefaultPartitionKey()
@@ -188,11 +188,7 @@ namespace AzureCloudTableContext.Api
             var transitionObject = JsonConvert.DeserializeObject<TDomainObject>(fatEntityString);
 
             //var transitionObject = (TDomainObject)JsonSerializer.DeserializeFromString(fatEntityString, Type.GetType(DomainObjectType));
-            DomainObjectInstance = transitionObject;
-            if (DomainObjectInstance == null)
-            {
-                DomainObjectInstance = new TDomainObject();
-            }
+            DomainObjectInstance = transitionObject ?? new TDomainObject();
         }
 
 
@@ -238,7 +234,7 @@ namespace AzureCloudTableContext.Api
 
 
     /// <summary>
-    ///     Exception that is thrown when a POCO is too large to be serialized and stored in Azure table storage.
+    /// Exception that is thrown when a POCO is too large to be serialized and stored in Azure table storage.
     /// </summary>
     public class ObjectToLargeForFatEntityException : Exception
     {
@@ -261,7 +257,7 @@ namespace AzureCloudTableContext.Api
 
 
         /// <summary>
-        ///     The object that was too large to be stored.
+        /// The object that was too large to be stored.
         /// </summary>
         public object GivenObject { get; }
     }
