@@ -2,7 +2,8 @@
 using System.IO;
 using System.Linq.Expressions;
 
-namespace AzureCloudTableContext.Api
+
+namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     /// Extension methods used with the AzureCloudTableContext.Api

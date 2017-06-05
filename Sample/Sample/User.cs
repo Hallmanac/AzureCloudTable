@@ -8,6 +8,9 @@ namespace Sample
         public string FirstName { get; set; }
         public string LastName { get; set; }
         public string EmailAddress { get; set; }
+        public bool IsAdmin { get; set; }
+        public string NameOfEmployeeMinion { get; set; }
+        public string NameOfManager { get; set; }
         public Address UserAddress { get; set; }
         public int Version { get; set; }
     }
@@ -20,15 +23,4 @@ namespace Sample
         public string State { get; set; }
         public int ZipCode { get; set; }
     }
-
-    public class Admin : User
-    {
-        public string NameOfEmployeeMinion { get; set; }
-    }
-
-    public class Standard : User
-    {
-        public string NameOfManager { get; set; }
-    }
-    
 }

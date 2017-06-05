@@ -1,4 +1,4 @@
-﻿namespace AzureCloudTableContext.Api
+﻿namespace Hallmanac.AzureCloudTable.API
 {
     public class CtConstants
     {

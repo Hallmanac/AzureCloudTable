@@ -3,12 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.26430.12
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sample", "Sample\Sample.csproj", "{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}"
-	ProjectSection(ProjectDependencies) = postProject
-		{2F903A85-EE73-4A46-813E-83E258BA9F6B} = {2F903A85-EE73-4A46-813E-83E258BA9F6B}
-	EndProjectSection
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureCloudTable.API", "AzureCloudTable.Api\AzureCloudTable.API.csproj", "{2F903A85-EE73-4A46-813E-83E258BA9F6B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AzureCloudTable.API", "..\src\AzureCloudTable.Api\AzureCloudTable.API.csproj", "{2F903A85-EE73-4A46-813E-83E258BA9F6B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5AAAC27-C404-4116-9BF6-C297BFA43E69}"
+	ProjectSection(SolutionItems) = preProject
+		..\README.md = ..\README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -16,10 +16,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BCE55E78-F1CF-4FFC-8B89-DEFD7820A82B}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F903A85-EE73-4A46-813E-83E258BA9F6B}.Release|Any CPU.ActiveCfg = Release|Any CPU

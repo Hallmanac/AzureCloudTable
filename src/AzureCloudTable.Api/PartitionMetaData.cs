@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AzureCloudTableContext.Api
+
+namespace Hallmanac.AzureCloudTable.API
 {
     /// <summary>
     /// Used in the CloudTableContext class internally to wrap the list of PartitionKeys

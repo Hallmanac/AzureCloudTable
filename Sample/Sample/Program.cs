@@ -1,28 +1,30 @@
-﻿namespace Sample
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+
+using Newtonsoft.Json;
+
+
+namespace Sample
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Diagnostics;
-    using System.Linq;
-    using System.Net;
-    using ServiceStack.Text;
 
     internal class Program
     {
-        private static void Main(string[] args)
+        private static void Main()
         {
             var sw = new Stopwatch();
             var listOfUsers = new List<User>();
 
             #region First Test
-            var adminUser = new List<Admin>();
+            var adminUsers = new List<User>();
             Console.WriteLine("Initializing User Repo...");
             sw.Start();
             var userRepo = new UserRepository();
             sw.Stop();
             Console.WriteLine("Repo took {0} milliseconds to complete.\n", sw.ElapsedMilliseconds);
-            Console.WriteLine("The nagle = {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.Expect100Continue);
-            Console.WriteLine("The Expect100 status is {0}", userRepo.UserContext.TableAccessContext.TableServicePoint.UseNagleAlgorithm);
+            Console.WriteLine("The nagle = {0}", userRepo.UserContext.TableOperationsService.TableServicePoint.Expect100Continue);
+            Console.WriteLine("The Expect100 status is {0}", userRepo.UserContext.TableOperationsService.TableServicePoint.UseNagleAlgorithm);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
@@ -43,25 +45,28 @@
                 {
                     if(i % 6 == 0)
                     {
-                        var adminUsr = new Admin();
-                        adminUsr.UserId = Guid.NewGuid();
-                        adminUsr.FirstName = "Brian";
-                        adminUsr.LastName = "Hall";
-                        adminUsr.EmailAddress = "Brian@Hallmanac.com";
-                        adminUsr.UserAddress = new Address
+                        var adminUsr = new User
                         {
-                            StreetNumber = 1234,
-                            StreetName = "Anywhere ST",
-                            City = "Orlando",
-                            State = "FL",
-                            ZipCode = 55555
+                            UserId = Guid.NewGuid(),
+                            FirstName = "Brian",
+                            LastName = "Hall",
+                            EmailAddress = "Brian@Hallmanac.com",
+                            UserAddress = new Address
+                            {
+                                StreetNumber = 1234,
+                                StreetName = "Anywhere ST",
+                                City = "Orlando",
+                                State = "FL",
+                                ZipCode = 55555
+                            },
+                            NameOfEmployeeMinion = "Jennifer",
+                            IsAdmin = true
                         };
-                        adminUsr.NameOfEmployeeMinion = "Jennifer";
                         listOfUsers.Add(adminUsr);
                     }
                     else
                     {
-                        var stdUsr = new Standard
+                        var stdUsr = new User
                         {
                             UserId = Guid.NewGuid(),
                             FirstName = "Daryl",
@@ -87,7 +92,7 @@
                 Console.WriteLine("\nUsers created in {0} milliseconds.", sw.ElapsedMilliseconds);
                 Console.WriteLine("Press enter to see info for User 1.");
                 Console.ReadLine();
-                Console.WriteLine("User 1 is: \n{0}", listOfUsers[0].SerializeAndFormat());
+                Console.WriteLine("User 1 is: \n{0}", JsonConvert.SerializeObject(listOfUsers[0], Formatting.Indented));
                 Console.WriteLine("Press any key to continue...");
                 Console.ReadLine();
                 Console.WriteLine("Saving Users...");
@@ -141,7 +146,7 @@
                 Console.ReadLine();
                 Console.WriteLine("Getting users with first name of Brian...");
                 sw.Start();
-                var usersWithFirstNameBrian = userRepo.GetUsersByFirstName("Brian").ToList();
+                var usersWithFirstNameBrian = userRepo.GetUsersByFirstName("Brian");
                 sw.Stop();
                 //Console.WriteLine("List of Users with First Name of Brian:\n{0}", usersWithFirstNameBrian.SerializeAndFormat());
                 Console.WriteLine("\nTime taken was {0} milliseconds.", sw.ElapsedMilliseconds);
@@ -160,11 +165,11 @@
                 }
             }*/
             var retrievedAdmins = userRepo.GetUsersByTypeOfUser("Admin");
-            adminUser.AddRange(retrievedAdmins.ConvertAll(usr => (Admin)usr));
+            adminUsers.AddRange(retrievedAdmins);
             sw.Stop();
             //Console.WriteLine("List of Admin users: \n{0}", adminUser.SerializeAndFormat());
             Console.WriteLine("\nTime taken was {0} milliseconds.", sw.ElapsedMilliseconds);
-            Console.WriteLine("\nThere were {0} users retrieved.", adminUser.Count);
+            Console.WriteLine("\nThere were {0} users retrieved.", adminUsers.Count);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
@@ -188,16 +193,16 @@
             Console.WriteLine("Getting versions for Jennifer Admin...");
             sw.Start();
             var jenniferUser = userRepo.GetUsersByFirstName("Jennifer");
-            var listOfJenniferVersions = new List<Admin>();
-            if(jenniferUser != null && jenniferUser.Any())
+            var listOfJenniferVersions = new List<User>();
+            if(jenniferUser != null)
             {
                 foreach (var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
                 {
-                    listOfJenniferVersions.Add((Admin)userVersion);
+                    listOfJenniferVersions.Add(userVersion);
                 }
             }
             sw.Stop();
-            Console.WriteLine("All Versions of Jenfer Admin...\n{0}", listOfJenniferVersions.SerializeAndFormat());
+            Console.WriteLine("All Versions of Jenfer Admin...\n{0}", JsonConvert.SerializeObject(listOfJenniferVersions, Formatting.Indented));
             Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
