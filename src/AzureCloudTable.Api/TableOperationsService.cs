@@ -231,8 +231,20 @@ namespace Hallmanac.AzureCloudTable.API
         {
             tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
             tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
-            var deleteOperation = TableOperation.Delete(tableEntity);
-            await Table.ExecuteAsync(deleteOperation);
+            tableEntity.ETag = "*";
+            try
+            {
+                var deleteOperation = TableOperation.Delete(tableEntity);
+                await Table.ExecuteAsync(deleteOperation);
+            }
+            catch (StorageException e)
+            {
+                if (e.RequestInformation.HttpStatusCode == (int) HttpStatusCode.NotFound)
+                {
+                    return;
+                }
+                throw;
+            }
         }
 
         /// <summary>
