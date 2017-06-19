@@ -963,6 +963,7 @@ namespace Hallmanac.AzureCloudTable.API
                         tableBatchOperation.Merge(entity);
                         break;
                     case CtConstants.TableOpDelete:
+                        entity.ETag = "*";
                         tableBatchOperation.Delete(entity);
                         break;
                     case CtConstants.TableOpReplace:
