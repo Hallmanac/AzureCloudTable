@@ -46,6 +46,7 @@ namespace Hallmanac.AzureCloudTable.API
         public TableOperationsService(CloudStorageAccount storageAccount, string tableName)
         {
             tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
+            _encoder = new TableKeyEncoder();
             InitTableAccess(storageAccount, tableName);
         }
 
