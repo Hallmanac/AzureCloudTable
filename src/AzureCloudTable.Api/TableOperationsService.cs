@@ -342,11 +342,14 @@ namespace Hallmanac.AzureCloudTable.API
                 });
             }
             // Iterating through the batch key-value pairs and executing the batch
-            Parallel.ForEach(batchPartitionPairs, pair =>
+            foreach (var pair in batchPartitionPairs)
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName, _encoder);
-                entityBatch.BatchList.ForEach(batchOp => Table.ExecuteBatch(batchOp));
-            });
+                foreach (var batchOp in entityBatch.BatchList)
+                {
+                    Table.ExecuteBatch(batchOp);
+                }
+            }
         }
 
         private async Task ExecuteBatchOperationAsync(IEnumerable<TAzureTableEntity> entities, string batchMethodName)
@@ -371,12 +374,12 @@ namespace Hallmanac.AzureCloudTable.API
                 });
             }
             // Iterating through the batch key-value pairs and executing the batch one partition at a time.
-            await Task.Run(() => Parallel.ForEach(batchPartitionPairs, async pair =>
+            foreach (var pair in batchPartitionPairs)
             {
                 var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName, _encoder);
                 var batchTasks = entityBatch.BatchList.Select(batchOp => Table.ExecuteBatchAsync(batchOp));
                 await Task.WhenAll(batchTasks);
-            }));
+            }
         }
         #endregion Writes
 
