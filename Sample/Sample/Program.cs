@@ -41,7 +41,7 @@ namespace Sample
             {
                 sw.Start();
                 #region Initialize Users
-                for(int i = 0; i < 500; i++)
+                for(var i = 0; i < 1200; i++)
                 {
                     if(i % 6 == 0)
                     {
@@ -205,6 +205,16 @@ namespace Sample
             Console.WriteLine("All Versions of Jenfer Admin...\n{0}", JsonConvert.SerializeObject(listOfJenniferVersions, Formatting.Indented));
             Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
             sw.Reset();
+            Console.WriteLine("Would you like to delete all the test data? -  y or n");
+            var shouldDeleteAnswer = Console.ReadLine();
+            if (string.Equals(shouldDeleteAnswer, "y", StringComparison.CurrentCultureIgnoreCase))
+            {
+                sw.Start();
+                userRepo.UserContext.Delete(existingUsers.ToArray());
+                sw.Stop();
+                Console.WriteLine("Deleted all users");
+                Console.WriteLine($"Time taken was {sw.ElapsedMilliseconds}");
+            }
             Console.WriteLine("\nPress any key to continue...");
             /*Console.WriteLine("Getting versions for users...");
             if(existingUsers.Count < 1) existingUsers = userRepo.GetAllUsers().ToList();
