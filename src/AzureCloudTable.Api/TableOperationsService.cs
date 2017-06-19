@@ -401,6 +401,8 @@ namespace Hallmanac.AzureCloudTable.API
             var entities = Query().Where(tEnt => tEnt.PartitionKey == encodedPartitionKey);
             foreach (var entity in entities)
             {
+                if (entity == null)
+                    continue;
                 entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
                 entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
                 yield return entity;
@@ -427,6 +429,8 @@ namespace Hallmanac.AzureCloudTable.API
                 currentQuerySegment = Table.ExecuteQuerySegmented(theQuery, currentQuerySegment?.ContinuationToken);
                 foreach(var entity in currentQuerySegment)
                 {
+                    if (entity == null)
+                        continue;
                     entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
                     entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
                     yield return entity;
@@ -447,6 +451,8 @@ namespace Hallmanac.AzureCloudTable.API
             for (var i = 0; i < resolvedList.Count; i++)
             {
                 var entity = resolvedList[i];
+                if (entity == null)
+                    continue;
                 entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
                 entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
                 returnList.Add(entity);
@@ -503,6 +509,8 @@ namespace Hallmanac.AzureCloudTable.API
             var retrieve = Table.Execute(TableOperation.Retrieve<TAzureTableEntity>(encodedPartitionKey, encodedRowKey));
             var result = retrieve.Result;
             var entity = (TAzureTableEntity)result;
+            if (entity == null)
+                return null;
             entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
             entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
             return entity;
@@ -521,6 +529,8 @@ namespace Hallmanac.AzureCloudTable.API
             var encodedRowKey = _encoder.EncodeTableKey(rowKey);
             var retrieved = await Table.ExecuteAsync(TableOperation.Retrieve<TAzureTableEntity>(encodedPartitionKey, encodedRowKey));
             var entity = (TAzureTableEntity)retrieved.Result;
+            if (entity == null)
+                return null;
             entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
             entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
             return entity;
