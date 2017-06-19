@@ -21,10 +21,10 @@ namespace Hallmanac.AzureCloudTable.API
     /// conjunction with the TableEntityWrapper class to wrap a POCO.
     /// </summary>
     /// <typeparam name="TAzureTableEntity"></typeparam>
-    public class TableOperationsService<TAzureTableEntity> where TAzureTableEntity : ITableEntity, new()
+    public class TableOperationsService<TAzureTableEntity> where TAzureTableEntity : class, ITableEntity, new()
     {
         private CloudStorageAccount _storageAccount;
-
+        private readonly TableKeyEncoder _encoder;
 
         /// <summary>
         /// Constructor that takes in only the storage account for access. It determines a default table name by using the type name
@@ -34,6 +34,7 @@ namespace Hallmanac.AzureCloudTable.API
         public TableOperationsService(CloudStorageAccount storageAccount)
         {
             var tableName = $"{typeof(TAzureTableEntity).Name}Table";
+            _encoder = new TableKeyEncoder();
             InitTableAccess(storageAccount, tableName);
         }
 
@@ -53,6 +54,10 @@ namespace Hallmanac.AzureCloudTable.API
         /// </summary>
         public CloudTable Table { get; private set; }
 
+        /// <summary>
+        /// Provides connection management for HTTP connections. We use this to set connection properties to optimize the 
+        /// communication to Azure Table Storage.
+        /// </summary>
         public ServicePoint TableServicePoint { get; set; }
 
         /// <summary>
@@ -68,21 +73,28 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void InsertOrMerge(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var updateOperation = TableOperation.InsertOrMerge(tableEntity);
             Table.Execute(updateOperation);
         }
 
+        /// <summary>
+        /// Executes a single table operation for Insert Or Merge
+        /// </summary>
+        /// <param name="tableEntity"></param>
+        /// <returns></returns>
         public async Task InsertOrMergeAsync(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var updateOperation = TableOperation.InsertOrMerge(tableEntity);
             await Table.ExecuteAsync(updateOperation);
         }
 
         /// <summary>
-        ///     Executes a batch table operation of the same name on an array of
-        ///     <param name="entities"></param>
-        ///     . Insures that
-        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        ///     Executes a batch table operation of the same name on an array of given entities. Insures that
+        ///     the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
         ///     no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
@@ -91,6 +103,12 @@ namespace Hallmanac.AzureCloudTable.API
             ExecuteBatchOperation(entities, CtConstants.TableOpInsertOrMerge);
         }
 
+        /// <summary>
+        /// Executes a batch table operation for Insert Or Merge. Insures that the batch meets Azure Table requrirements for 
+        /// Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch) 
+        /// </summary>
+        /// <param name="entities"></param>
+        /// <returns></returns>
         public async Task InsertOrMergeAsync(TAzureTableEntity[] entities)
         {
             await ExecuteBatchOperationAsync(entities, CtConstants.TableOpInsertOrMerge).ConfigureAwait(false);
@@ -102,6 +120,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void InsertOrReplace(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var updateOperation = TableOperation.InsertOrReplace(tableEntity);
             Table.Execute(updateOperation);
         }
@@ -113,16 +133,16 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task InsertOrReplaceAsync(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var updateOperation = TableOperation.InsertOrReplace(tableEntity);
             await Table.ExecuteAsync(updateOperation);
         }
 
         /// <summary>
-        ///     Executes a batch table operation of the same name on an array of
-        ///     <param name="entities"></param>
-        ///     . Insures that
-        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        ///     no more than 100 in a batch).
+        /// Executes a batch table operation of the same name on an array of given entities. Insures that the batch meets 
+        /// Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        /// no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void InsertOrReplace(TAzureTableEntity[] entities)
@@ -148,6 +168,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Insert(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var insertTableEntity = TableOperation.Insert(tableEntity);
             Table.Execute(insertTableEntity);
         }
@@ -159,16 +181,16 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task InsertAsync(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var insertTableEntity = TableOperation.Insert(tableEntity);
             await Table.ExecuteAsync(insertTableEntity);
         }
 
         /// <summary>
-        ///     Executes a batch table operation of the same name on an array of
-        ///     <param name="entities"></param>
-        ///     . Insures that
-        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        ///     no more than 100 in a batch).
+        /// Executes a batch table operation of the same name on an array of given entities. Insures that the batch meets 
+        /// Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        /// no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void Insert(TAzureTableEntity[] entities)
@@ -177,9 +199,8 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
         /// <summary>
-        ///     Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table
-        ///     requirements
-        ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
+        /// Executes a batch InsertOrReplace asynchronously and groups the given entities into groups that meet the Azure Table requirements
+        /// for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         /// <returns></returns>
@@ -194,6 +215,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Delete(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var deleteOperation = TableOperation.Delete(tableEntity);
             Table.Execute(deleteOperation);
         }
@@ -205,16 +228,16 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task DeleteAsync(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var deleteOperation = TableOperation.Delete(tableEntity);
             await Table.ExecuteAsync(deleteOperation);
         }
 
         /// <summary>
-        ///     Executes a batch table operation of the same name on an array of
-        ///     <param name="entities"></param>
-        ///     . Insures that
-        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        ///     no more than 100 in a batch).
+        /// Executes a batch table operation of the same name on an array of given entities. Insures that the batch meets Azure Table 
+        /// requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
+        /// no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void Delete(TAzureTableEntity[] entities)
@@ -223,8 +246,7 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
         /// <summary>
-        ///     Executes a batch Delete asynchronously and groups the given entities into groups that meet the Azure Table
-        ///     requirements
+        ///     Executes a batch Delete asynchronously and groups the given entities into groups that meet the Azure Table requirements
         ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
@@ -240,6 +262,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="tableEntity">Single entity used in table operation.</param>
         public void Replace(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var replaceOperation = TableOperation.Delete(tableEntity);
             Table.Execute(replaceOperation);
         }
@@ -251,16 +275,16 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task ReplaceAsync(TAzureTableEntity tableEntity)
         {
+            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
+            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var replaceOperation = TableOperation.Delete(tableEntity);
             await Table.ExecuteAsync(replaceOperation);
         }
 
         /// <summary>
-        ///     Executes a batch table operation of the same name on an array of
-        ///     <param name="entities"></param>
-        ///     . Insures that
-        ///     that the batch meets Azure Table requrirements for Entity Group Transactions (i.e. batch no larger than 4MB or
-        ///     no more than 100 in a batch).
+        /// Executes a batch table operation of the same name on an array of given entiteis. Insures that the batch meets Azure Table requrirements 
+        /// for Entity Group Transactions (i.e. batch no larger than 4MB or
+        /// no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
         public void Replace(TAzureTableEntity[] entities)
@@ -269,8 +293,7 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
         /// <summary>
-        ///     Executes a batch Replace asynchronously and groups the given entities into groups that meet the Azure Table
-        ///     requirements
+        ///     Executes a batch Replace asynchronously and groups the given entities into groups that meet the Azure Table requirements
         ///     for Entity Group Transactions (i.e. batch no larger than 4MB or no more than 100 in a batch).
         /// </summary>
         /// <param name="entities"></param>
@@ -284,11 +307,11 @@ namespace Hallmanac.AzureCloudTable.API
         {
             if(entities == null)
             {
-                throw new ArgumentNullException("entities");
+                throw new ArgumentNullException(nameof(entities));
             }
             if(string.IsNullOrEmpty(batchMethodName))
             {
-                throw new ArgumentNullException("batchMethodName");
+                throw new ArgumentNullException(nameof(batchMethodName));
             }
             // Creating a dictionary to group partitions together since a batch can only represent one partition.
             var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
@@ -304,7 +327,7 @@ namespace Hallmanac.AzureCloudTable.API
             // Iterating through the batch key-value pairs and executing the batch
             Parallel.ForEach(batchPartitionPairs, pair =>
             {
-                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
+                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName, _encoder);
                 entityBatch.BatchList.ForEach(batchOp => Table.ExecuteBatch(batchOp));
             });
         }
@@ -313,11 +336,11 @@ namespace Hallmanac.AzureCloudTable.API
         {
             if(entities == null)
             {
-                throw new ArgumentNullException("entities");
+                throw new ArgumentNullException(nameof(entities));
             }
             if(string.IsNullOrEmpty(batchMethodName))
             {
-                throw new ArgumentNullException("batchMethodName");
+                throw new ArgumentNullException(nameof(batchMethodName));
             }
             // Creating a dictionary to group partitions together since a batch can only represent one partition.
             var batchPartitionPairs = new ConcurrentDictionary<string, List<TAzureTableEntity>>();
@@ -333,7 +356,7 @@ namespace Hallmanac.AzureCloudTable.API
             // Iterating through the batch key-value pairs and executing the batch one partition at a time.
             await Task.Run(() => Parallel.ForEach(batchPartitionPairs, async pair =>
             {
-                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName);
+                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName, _encoder);
                 var batchTasks = entityBatch.BatchList.Select(batchOp => Table.ExecuteBatchAsync(batchOp));
                 await Task.WhenAll(batchTasks);
             }));
@@ -357,12 +380,25 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> GetByPartitionKey(string partitionKey)
         {
-            return Query().Where(tEnt => tEnt.PartitionKey == partitionKey);
+            var encodedPartitionKey = _encoder.EncodeTableKey(partitionKey);
+            var entities = Query().Where(tEnt => tEnt.PartitionKey == encodedPartitionKey);
+            foreach (var entity in entities)
+            {
+                entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
+                entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
+                yield return entity;
+            }
         }
 
+        /// <summary>
+        /// Gets all table entities that are in a given partition
+        /// </summary>
+        /// <param name="partitionKey"></param>
+        /// <returns></returns>
         public async Task<List<TAzureTableEntity>> GetByPartitionKeyAsync(string partitionKey)
         {
-            var theQuery = Query().Where(tEnt => tEnt.PartitionKey == partitionKey);
+            var encodedPartitionKey = _encoder.EncodeTableKey(partitionKey);
+            var theQuery = Query().Where(tEnt => tEnt.PartitionKey == encodedPartitionKey);
             return await RunQuerySegmentAsync(theQuery.AsTableQuery()).ConfigureAwait(false);
         }
 
@@ -371,10 +407,11 @@ namespace Hallmanac.AzureCloudTable.API
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
-                currentQuerySegment = Table.ExecuteQuerySegmented(theQuery,
-                    currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
+                currentQuerySegment = Table.ExecuteQuerySegmented(theQuery, currentQuerySegment?.ContinuationToken);
                 foreach(var entity in currentQuerySegment)
                 {
+                    entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
+                    entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
                     yield return entity;
                 }
             }
@@ -383,22 +420,30 @@ namespace Hallmanac.AzureCloudTable.API
         private async Task<List<TAzureTableEntity>> RunQuerySegmentAsync(TableQuery<TAzureTableEntity> tableQuery)
         {
             TableQuerySegment<TAzureTableEntity> querySegment = null;
-            var returnList = new List<TAzureTableEntity>();
+            var resolvedList = new List<TAzureTableEntity>();
             while(querySegment == null || querySegment.ContinuationToken != null)
             {
-                querySegment = await Table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
-                returnList.AddRange(querySegment);
+                querySegment = await Table.ExecuteQuerySegmentedAsync(tableQuery, querySegment?.ContinuationToken);
+                resolvedList.AddRange(querySegment);
+            }
+            var returnList = new List<TAzureTableEntity>();
+            for (var i = 0; i < resolvedList.Count; i++)
+            {
+                var entity = resolvedList[i];
+                entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
+                entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
+                returnList.Add(entity);
             }
             return returnList;
         }
 
-        private IEnumerable<TAzureTableEntity> RunQuerySegmentWithFilter(TableQuery<TAzureTableEntity> theQuery,
+        /*private IEnumerable<TAzureTableEntity> RunQuerySegmentWithFilter(TableQuery<TAzureTableEntity> theQuery,
                                                                          Func<TAzureTableEntity, bool> customFilter)
         {
             TableQuerySegment<TAzureTableEntity> currentQuerySegment = null;
             while(currentQuerySegment == null || currentQuerySegment.ContinuationToken != null)
             {
-                currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment != null ? currentQuerySegment.ContinuationToken : null);
+                currentQuerySegment = theQuery.ExecuteSegmented(currentQuerySegment?.ContinuationToken);
                 foreach(var entity in currentQuerySegment)
                 {
                     if(customFilter(entity))
@@ -407,16 +452,16 @@ namespace Hallmanac.AzureCloudTable.API
                     }
                 }
             }
-        }
+        }*/
 
-        private async Task<List<TAzureTableEntity>> RunQuerySegmentWithFilterAsync(TableQuery<TAzureTableEntity> tableQuery,
+        /*private async Task<List<TAzureTableEntity>> RunQuerySegmentWithFilterAsync(TableQuery<TAzureTableEntity> tableQuery,
                                                                                    Func<TAzureTableEntity, bool> customFilter)
         {
             TableQuerySegment<TAzureTableEntity> querySegment = null;
             var returnList = new List<TAzureTableEntity>();
             while(querySegment == null || querySegment.ContinuationToken != null)
             {
-                querySegment = await Table.ExecuteQuerySegmentedAsync(tableQuery, querySegment != null ? querySegment.ContinuationToken : null);
+                querySegment = await Table.ExecuteQuerySegmentedAsync(tableQuery, querySegment?.ContinuationToken);
                 foreach(var entity in querySegment)
                 {
                     if(customFilter(entity))
@@ -426,7 +471,7 @@ namespace Hallmanac.AzureCloudTable.API
                 }
             }
             return returnList;
-        }
+        }*/
 
         /// <summary>
         ///     Returns a single table entity based on a given PartitionKey & RowKey combination.
@@ -436,9 +481,14 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public TAzureTableEntity Find(string partitionKey, string rowKey)
         {
-            var retrieve = Table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
+            var encodedPartitionKey = _encoder.EncodeTableKey(partitionKey);
+            var encodedRowKey = _encoder.EncodeTableKey(rowKey);
+            var retrieve = Table.Execute(TableOperation.Retrieve<TAzureTableEntity>(encodedPartitionKey, encodedRowKey));
             var result = retrieve.Result;
-            return (TAzureTableEntity)result;
+            var entity = (TAzureTableEntity)result;
+            entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
+            entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
+            return entity;
             //return (TAzureTableEntity)_table.Execute(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey)).Result;
         }
 
@@ -450,9 +500,13 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task<TAzureTableEntity> FindAsync(string partitionKey, string rowKey)
         {
-            var query = Table.CreateQuery<TAzureTableEntity>().Where(tEnt => tEnt.PartitionKey == partitionKey && tEnt.RowKey == rowKey);
-            var retrieved = await Table.ExecuteAsync(TableOperation.Retrieve<TAzureTableEntity>(partitionKey, rowKey));
-            return (TAzureTableEntity)retrieved.Result;
+            var encodedPartitionKey = _encoder.EncodeTableKey(partitionKey);
+            var encodedRowKey = _encoder.EncodeTableKey(rowKey);
+            var retrieved = await Table.ExecuteAsync(TableOperation.Retrieve<TAzureTableEntity>(encodedPartitionKey, encodedRowKey));
+            var entity = (TAzureTableEntity)retrieved.Result;
+            entity.PartitionKey = _encoder.DecodeTableKey(entity.PartitionKey);
+            entity.RowKey = _encoder.DecodeTableKey(entity.RowKey);
+            return entity;
         }
 
         /// <summary>
@@ -465,16 +519,17 @@ namespace Hallmanac.AzureCloudTable.API
         public IEnumerable<TAzureTableEntity> GetByPartitionKeyWithRowKeyRange(string pK, string minRowKey = "",
                                                                                string maxRowKey = "")
         {
-            var pKFilter = GeneratePartitionKeyFilterCondition(pK);
-            var rKMinimum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.GreaterThanOrEqual,
-                minRowKey);
-            var rKMaximum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.LessThanOrEqual, maxRowKey);
+            var encMinRowKey = _encoder.EncodeTableKey(minRowKey);
+            var encMaxRowKey = _encoder.EncodeTableKey(maxRowKey);
+            var pKFilter = GeneratePartitionKeyFilterCondition(_encoder.EncodeTableKey(pK));
+            var rKMinimum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.GreaterThanOrEqual, encMinRowKey);
+            var rKMaximum = TableQuery.GenerateFilterCondition(CtConstants.PropNameRowKey, QueryComparisons.LessThanOrEqual, encMaxRowKey);
             string combinedFilter;
-            if(string.IsNullOrWhiteSpace(minRowKey))
+            if(string.IsNullOrWhiteSpace(encMinRowKey))
             {
                 combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum})";
             }
-            else if(string.IsNullOrWhiteSpace(maxRowKey))
+            else if(string.IsNullOrWhiteSpace(encMaxRowKey))
             {
                 combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMinimum})";
             }
@@ -497,16 +552,17 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> GetByPartitionKeyWithRowKeyRangeAsync(string pK, string minRowKey = "",
                                                                                          string maxRowKey = "")
         {
-            var pKFilter = GeneratePartitionKeyFilterCondition(pK);
-            var rKMinimum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual,
-                minRowKey);
-            var rKMaximum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, maxRowKey);
+            var encMinRowKey = _encoder.EncodeTableKey(minRowKey);
+            var encMaxRowKey = _encoder.EncodeTableKey(maxRowKey);
+            var pKFilter = GeneratePartitionKeyFilterCondition(_encoder.EncodeTableKey(pK));
+            var rKMinimum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.GreaterThanOrEqual, encMinRowKey);
+            var rKMaximum = TableQuery.GenerateFilterCondition("RowKey", QueryComparisons.LessThanOrEqual, encMaxRowKey);
             string combinedFilter;
-            if(string.IsNullOrWhiteSpace(minRowKey))
+            if(string.IsNullOrWhiteSpace(encMinRowKey))
             {
                 combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMaximum})";
             }
-            else if(string.IsNullOrWhiteSpace(maxRowKey))
+            else if(string.IsNullOrWhiteSpace(encMaxRowKey))
             {
                 combinedFilter = $"({pKFilter}) {TableOperators.And} ({rKMinimum})";
             }
@@ -549,7 +605,7 @@ namespace Hallmanac.AzureCloudTable.API
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, string property)
         {
             var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -565,7 +621,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, string property)
         {
             var propertyFilter = TableQuery.GenerateFilterCondition(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -581,7 +637,7 @@ namespace Hallmanac.AzureCloudTable.API
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, byte[] property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -597,7 +653,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, byte[] property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBinary(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -614,7 +670,7 @@ namespace Hallmanac.AzureCloudTable.API
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal,
                 property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -630,7 +686,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, bool property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForBool(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -645,9 +701,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, DateTimeOffset property)
         {
-            var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal,
-                property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -660,11 +715,10 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="propertyName"></param>
         /// <param name="property"></param>
         /// <returns></returns>
-        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName,
-                                                                                 DateTimeOffset property)
+        public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, DateTimeOffset property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDate(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -679,9 +733,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, double property)
         {
-            var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal,
-                property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -697,7 +750,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, double property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForDouble(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -712,9 +765,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, Guid property)
         {
-            var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal,
-                property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -730,7 +782,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, Guid property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForGuid(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -745,9 +797,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, int property)
         {
-            var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal,
-                property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -763,7 +814,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, int property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForInt(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
 
@@ -778,9 +829,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TAzureTableEntity> QueryWherePropertyEquals(string partitionKey, string propertyName, long property)
         {
-            var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal,
-                property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal, property);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return RunQuerySegment(query);
         }
 
@@ -796,7 +846,7 @@ namespace Hallmanac.AzureCloudTable.API
         public async Task<List<TAzureTableEntity>> QueryWherePropertyEqualsAsync(string partitionKey, string propertyName, long property)
         {
             var propertyFilter = TableQuery.GenerateFilterConditionForLong(propertyName, QueryComparisons.Equal, property);
-            var query = CreateQueryWithPartitionKeyAndPropertyFilter(partitionKey, propertyFilter);
+            var query = CreateQueryWithPartitionKeyAndPropertyFilter(_encoder.EncodeTableKey(partitionKey), propertyFilter);
             return await RunQuerySegmentAsync(query).ConfigureAwait(false);
         }
         #endregion
@@ -820,12 +870,14 @@ namespace Hallmanac.AzureCloudTable.API
         {
             private readonly string _operationName;
 
-            public EntityBatch(IEnumerable<TAzureTableEntity> entities, string operationName)
+            public EntityBatch(IEnumerable<TAzureTableEntity> entities, string operationName, TableKeyEncoder encoder)
             {
                 _operationName = operationName;
                 EntitiesToBatch = new List<EntityBatchPair>();
                 foreach(var azureTableEntity in entities)
                 {
+                    azureTableEntity.PartitionKey = encoder.EncodeTableKey(azureTableEntity.PartitionKey);
+                    azureTableEntity.RowKey = encoder.EncodeTableKey(azureTableEntity.RowKey);
                     EntitiesToBatch.Add(new EntityBatchPair(azureTableEntity));
                 }
                 BatchList = new List<TableBatchOperation>();
@@ -833,9 +885,9 @@ namespace Hallmanac.AzureCloudTable.API
                 GroupEntitiesIntoBatches();
             }
 
-            public List<EntityBatchPair> EntitiesToBatch { get; private set; }
+            public List<EntityBatchPair> EntitiesToBatch { get; }
 
-            public Int64 BatchArrayByteSize { get; private set; }
+            public Int64 BatchArrayByteSize { get; }
 
             public List<TableBatchOperation> BatchList { get; set; }
 
@@ -867,7 +919,7 @@ namespace Hallmanac.AzureCloudTable.API
                 }
             }
 
-            private void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
+            private static void AddOperationToBatch(ref TableBatchOperation tableBatchOperation, TAzureTableEntity entity, string batchMethodName)
             {
                 switch(batchMethodName)
                 {
@@ -910,10 +962,10 @@ namespace Hallmanac.AzureCloudTable.API
                 IsInBatch = false;
             }
 
-            public TAzureTableEntity TableEntity { get; private set; }
-            public string SerializedEntity { get; private set; }
+            public TAzureTableEntity TableEntity { get; }
+            public string SerializedEntity { get; }
 
-            public int EntityByteSize { get; private set; }
+            public int EntityByteSize { get; }
             public bool IsInBatch { get; set; }
         }
     }
