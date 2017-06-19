@@ -255,6 +255,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="entities"></param>
         public void Delete(TAzureTableEntity[] entities)
         {
+            // Unfortunately Azure Table storage is not smart enough to handle deletes when the entity does not exist so we have to make sure it exists
+            InsertOrReplace(entities);
             ExecuteBatchOperation(entities, CtConstants.TableOpDelete);
         }
 
@@ -266,6 +268,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task DeleteAsync(TAzureTableEntity[] entities)
         {
+            // Unfortunately Azure Table storage is not smart enough to handle deletes when the entity does not exist so we have to make sure it exists
+            await InsertOrReplaceAsync(entities);
             await ExecuteBatchOperationAsync(entities, CtConstants.TableOpDelete).ConfigureAwait(false);
         }
 
