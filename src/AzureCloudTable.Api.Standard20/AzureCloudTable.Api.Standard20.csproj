@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>AzureCloudTable.Api</RootNamespace>
+    <AssemblyVersion>1.1.1.0</AssemblyVersion>
+    <FileVersion>1.1.1.0</FileVersion>
+    <Version>1.1.1</Version>
+    <PackageProjectUrl>https://github.com/Hallmanac/AzureCloudTable</PackageProjectUrl>
+    <PackageId>Hallmanac.AzureCloudTable</PackageId>
+    <Authors>Brian Hall</Authors>
+    <Company>Hallmanac</Company>
+    <Product>Hallmanac.AzureCloudTable</Product>
+    <Description>In short, it enables the ability for POCO's to NOT have to inherit from TableEntity by saving them as JSON blobs and allows for secondary indexes to be defined via a contextually managed set of Index Name Keys (used as the Table Partition Key).
+
+1.1.1 -- Added support for .NET Standard 2.0
+
+1.1.0 -- Added custom encoder and decoder for Azure Table Keys to custom encode only the invalid characters of a Partition or Row key. Fixed issue of not being able to delete without etag. Removed Parallel.ForEach from batch operations since that's not a very good use case for it.
+
+1.0.0 -- A refactored version of AzureCloudTableContext with better naming, code documentation comments, and a more intuitive usage of the APIs. New version number and library name due to breaking changes mostly around renaming.
+
+********
+Previous Library
+*******
+2.2.0-beta -- Added async support and optimized for best practices (turning nagling off and turning Expect100Continue off). Also provided access to more low level features of the Storage SDK through the TableAccessContext class.
+
+2.1.0-beta -- Refactored out the calls to GetPropertyName to improve performance. See issue #2 on github.com/Hallmanac/AzureCloudTable
+
+2.0.7-beta -- Updated nuget packages to latest versions. 
+
+2.0.6-beta -- Updated the actual version number of the assembly as well as changed the required dependency for WindowsAzure.Storage to be the latest v2.1.0.
+
+2.0.5-beta -- Fixed reference to incorrect version of Microsoft.WindowsAzure.Storage. It was pointed to v2.0.0 and is now correctly pointed to v2.1.0.
+
+2.0.4-beta -- Fixed references in nuget packages from disparate git branches.
+
+2.0.3-beta -- Updated Nuget packages.
+
+2.0.2-beta-- Updated Nuget packages to use the latest (stable) update of the Azure Storage client library.
+
+2.0.1-beta-- Added a check on the CloudTableContext class that verifies the the current runtime list of PartitionSchemas matches up to the stored list of partition keys. If there are "newly created" PartitionSchemas (i.e. someone changed the code to add a new schema) then on the first time it's encountered the table will get re-indexed by retrieving the default schema and re-saving them using all the current schemas.
+
+2.0.0-beta-- Added type information to the CloudTableEntity. Changed the serialization to include type information. Changed the default RowKey to be based on the ID of the provided TDomainObject. Fixed bugs related to batch commits.
+
+1.1.2 - Renamed some fluent api methods, added a static way to set the RowKeyCriteria to be a Chronological based (or Reverse Chronological Based) row key.
+
+1.1.0 - Made breaking changes to API. Simplified it to have only one partition key per schema.</Description>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageLicenseUrl>https://github.com/Hallmanac/AzureCloudTable/blob/master/LICENSE</PackageLicenseUrl>
+    <Copyright />
+    <PackageTags>Azure Table Storage, Cloud Context, Azure, Table, CloudTableContext, AzureCloudTable, Hallmanac</PackageTags>
+    <RepositoryUrl>https://github.com/Hallmanac/AzureCloudTable</RepositoryUrl>
+    <RepositoryType>Git</RepositoryType>
+    <PackageReleaseNotes>1.1.1 -- Added support for .NET Standard 2.0</PackageReleaseNotes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WindowsAzure.Storage" Version="8.4.0" />
+  </ItemGroup>
+
+</Project>
