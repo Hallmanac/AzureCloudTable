@@ -54,6 +54,10 @@ Previous Library
     <PackageReleaseNotes>1.1.1 -- Added support for .NET Standard 2.0</PackageReleaseNotes>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DocumentationFile>bin\Release\netstandard2.0\AzureCloudTable.Api.Standard20.xml</DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Nito.AsyncEx.Tasks" Version="1.1.0" />
