@@ -33,9 +33,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="storageAccount"></param>
         public TableOperationsService(CloudStorageAccount storageAccount)
         {
-            var tableName = $"{typeof(TAzureTableEntity).Name}Table";
             _encoder = new TableKeyEncoder();
-            InitTableAccess(storageAccount, tableName);
+            InitConstructor(storageAccount);
         }
 
         /// <summary>
@@ -45,10 +44,54 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="tableName"></param>
         public TableOperationsService(CloudStorageAccount storageAccount, string tableName)
         {
-            tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
             _encoder = new TableKeyEncoder();
-            InitTableAccess(storageAccount, tableName);
+            InitConstructor(storageAccount, tableName);
         }
+
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// </summary>
+        public TableOperationsService(string connectionString)
+        {
+            _encoder = new TableKeyEncoder();
+            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            InitConstructor(storageAccount);
+        }
+
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// </summary>
+        public TableOperationsService(string connectionString, string tableName)
+        {
+            _encoder = new TableKeyEncoder();
+            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            InitConstructor(storageAccount, tableName);
+        }
+
+        private void InitConstructor(CloudStorageAccount storageAccount, string tableName = null)
+        {
+            TableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
+            TableServicePoint = ServicePointManager.FindServicePoint(storageAccount.TableEndpoint);
+            TableServicePoint.UseNagleAlgorithm = false;
+            TableServicePoint.Expect100Continue = false;
+            TableServicePoint.ConnectionLimit = 1000;
+            UseBackgroundTaskForIndexing = false;
+            TableClient = storageAccount.CreateCloudTableClient();
+
+            // I truly hate calling an async method inside the constructor like this but I'm afraid that it's the only place where I can 
+            // create the table to guarantee that it exists when someone accesses it from the Table property in this class
+            Table.CreateIfNotExists();
+        }
+
+        /// <summary>
+        /// Name of table in Azure Table Storage
+        /// </summary>
+        public string TableName { get; private set; }
+
+        /// <summary>
+        /// The CloudTableClient object that is used to connect to the current table.
+        /// </summary>
+        public CloudTableClient TableClient { get; private set; }
 
         /// <summary>
         /// Gets the current Azure Table being accessed.

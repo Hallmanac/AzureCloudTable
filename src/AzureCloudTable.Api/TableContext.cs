@@ -33,19 +33,30 @@ namespace Hallmanac.AzureCloudTable.API
         /// the default naming scheme used is the name of the generic type's name with "Table" appended 
         /// to it. For example "SomeClass" + "Table" for the table name of "SomeClassTable".
         /// </summary>
-        /// <param name="storageAccount"></param>
-        /// <param name="nameOfEntityIdProperty"></param>
-        /// <param name="tableName"></param>
         public TableContext(CloudStorageAccount storageAccount, string nameOfEntityIdProperty, string tableName = null)
         {
-            tableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TDomainEntity).Name}Table" : tableName;
+            if (string.IsNullOrWhiteSpace(nameOfEntityIdProperty))
+                throw new ArgumentNullException(nameof(nameOfEntityIdProperty));
             NameOfEntityIdProperty = nameOfEntityIdProperty;
-            var tableClient = storageAccount.CreateCloudTableClient();
-            var table = tableClient.GetTableReference(tableName);
-            table.CreateIfNotExists();
-            _tableMetaDataContext = new TableOperationsService<TableEntityWrapper<PartitionMetaData>>(storageAccount, tableName);
-            LoadTableMetaData();
             TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(storageAccount, tableName);
+            _tableMetaDataContext = new TableOperationsService<TableEntityWrapper<PartitionMetaData>>(storageAccount, TableOperationsService.TableName);
+            LoadTableMetaData();
+        }
+
+
+        /// <summary>
+        /// Initializes a new CloudTableContext object. If the "tableName" parameter is left null, then 
+        /// the default naming scheme used is the name of the generic type's name with "Table" appended 
+        /// to it. For example "SomeClass" + "Table" for the table name of "SomeClassTable".
+        /// </summary>
+        public TableContext(string connectionString, string nameOfEntityIdProperty, string tableName = null)
+        {
+            if (string.IsNullOrWhiteSpace(nameOfEntityIdProperty))
+                throw new ArgumentNullException(nameof(nameOfEntityIdProperty));
+            NameOfEntityIdProperty = nameOfEntityIdProperty;
+            TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(connectionString, tableName);
+            _tableMetaDataContext = new TableOperationsService<TableEntityWrapper<PartitionMetaData>>(connectionString, TableOperationsService.TableName);
+            LoadTableMetaData();
         }
 
 

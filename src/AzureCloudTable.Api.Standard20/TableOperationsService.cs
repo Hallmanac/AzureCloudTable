@@ -33,8 +33,44 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="storageAccount"></param>
         public TableOperationsService(CloudStorageAccount storageAccount)
         {
-            TableName = $"{typeof(TAzureTableEntity).Name}Table";
             _encoder = new TableKeyEncoder();
+            InitConstructor(storageAccount);
+        }
+
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// </summary>
+        /// <param name="storageAccount"></param>
+        /// <param name="tableName"></param>
+        public TableOperationsService(CloudStorageAccount storageAccount, string tableName)
+        {
+            _encoder = new TableKeyEncoder();
+            InitConstructor(storageAccount, tableName);
+        }
+
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// </summary>
+        public TableOperationsService(string connectionString)
+        {
+            _encoder = new TableKeyEncoder();
+            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            InitConstructor(storageAccount);
+        }
+
+        /// <summary>
+        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// </summary>
+        public TableOperationsService(string connectionString, string tableName)
+        {
+            _encoder = new TableKeyEncoder();
+            var storageAccount = CloudStorageAccount.Parse(connectionString);
+            InitConstructor(storageAccount, tableName);
+        }
+
+        private void InitConstructor(CloudStorageAccount storageAccount, string tableName = null)
+        {
+            TableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
             TableServicePoint = ServicePointManager.FindServicePoint(storageAccount.TableEndpoint);
             TableServicePoint.UseNagleAlgorithm = false;
             TableServicePoint.Expect100Continue = false;
@@ -48,29 +84,14 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
         /// <summary>
-        /// Constructor that takes in only the storage account for access. It determines a default table name by using the given tableName property.
+        /// Name of table in Azure Table Storage
         /// </summary>
-        /// <param name="storageAccount"></param>
-        /// <param name="tableName"></param>
-        public TableOperationsService(CloudStorageAccount storageAccount, string tableName)
-        {
-            TableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
-            _encoder = new TableKeyEncoder();
-            TableServicePoint = ServicePointManager.FindServicePoint(storageAccount.TableEndpoint);
-            TableServicePoint.UseNagleAlgorithm = false;
-            TableServicePoint.Expect100Continue = false;
-            TableServicePoint.ConnectionLimit = 1000;
-            UseBackgroundTaskForIndexing = false;
-            TableClient = storageAccount.CreateCloudTableClient();
+        public string TableName { get; private set; }
 
-            // I truly hate calling an async method inside the constructor like this but I'm afraid that it's the only place where I can 
-            // create the table to guarantee that it exists when someone accesses it from the Table property in this class
-            Table.CreateIfNotExistsAsync().WaitAndUnwrapException();
-        }
-
-        public string TableName { get; }
-
-        public CloudTableClient TableClient { get; }
+        /// <summary>
+        /// The CloudTableClient object that is used to connect to the current table.
+        /// </summary>
+        public CloudTableClient TableClient { get; private set; }
 
         /// <summary>
         /// Gets the current Azure Table being accessed. This is a property expression so it returns a new instance of the
