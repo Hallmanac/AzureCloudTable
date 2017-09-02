@@ -4,9 +4,7 @@ using System.Threading.Tasks;
 
 using Hallmanac.AzureCloudTable.API;
 
-using Microsoft.Azure;
-using Microsoft.WindowsAzure.Storage;
-
+using System.Configuration;
 
 namespace Sample
 {
@@ -23,9 +21,9 @@ namespace Sample
 
         public UserRepository()
         {
-            var connectionString = CloudConfigurationManager.GetSetting("AzureStorageConnectionString");
-            var storageAccount = CloudStorageAccount.Parse(connectionString);
-            UserContext = new TableContext<User>(storageAccount, "UserId");
+            var connectionString = ConfigurationManager.AppSettings["AzureStorageConnectionString"];
+            //var storageAccount = CloudStorageAccount.Parse(connectionString);
+            UserContext = new TableContext<User>(connectionString, "UserId");
 
             InitIndexDefinitions();
         }
