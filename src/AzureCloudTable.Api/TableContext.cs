@@ -116,8 +116,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public TableIndexDefinition<TDomainEntity> CreateIndexDefinition(string indexName)
         {
-            var schema = new TableIndexDefinition<TDomainEntity>(NameOfEntityIdProperty)
-                .SetIndexNameKey(indexName);
+            var schema = new TableIndexDefinition<TDomainEntity>(NameOfEntityIdProperty).SetIndexNameKey(indexName);
             return schema;
         }
 
@@ -167,11 +166,16 @@ namespace Hallmanac.AzureCloudTable.API
         /// <summary>
         /// A string for a row key that provides a default ordering of oldest to newest.
         /// </summary>
+        /// <param name="excludeJsonSerializationOfGuid">
+        /// This method historically has serialized the GUID that it generates to JSON. This was 
+        /// an odd decision and this p parameter is intended to correct the situation without breaking 
+        /// backward compatibility
+        /// </param>
         /// <returns></returns>
-        public string GetChronologicalBasedRowKey()
+        public string GetChronologicalBasedRowKey(bool excludeJsonSerializationOfGuid = false)
         {
             var now = DateTimeOffset.UtcNow;
-            return $"{now.Ticks:D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
+            return excludeJsonSerializationOfGuid ? $"{now.Ticks:D20}_{Guid.NewGuid()}" : $"{now.Ticks:D20}_{JsonConvert.SerializeObject(Guid.NewGuid())}";
         }
 
 
@@ -258,8 +262,7 @@ namespace Hallmanac.AzureCloudTable.API
                 };
 
                 // Checks if the current partition key has been registered with the list of partition keys for the table
-                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys
-                                            .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
+                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.All(schemaPartitionKey => schemaPartitionKey != tempTableEntity.PartitionKey))
                 {
                     _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
                     SaveIndexNameKeys();
@@ -289,11 +292,10 @@ namespace Hallmanac.AzureCloudTable.API
                 };
 
                 // Checks if the current partition key has been registered with the list of partition keys for the table
-                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys
-                                            .All(schemaPartitionKey => schemaPartitionKey == tempTableEntity.PartitionKey))
+                if (_partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.All(schemaPartitionKey => schemaPartitionKey != tempTableEntity.PartitionKey))
                 {
                     _partitionMetaDataEntityWrapper.DomainObjectInstance.PartitionKeys.Add(tempTableEntity.PartitionKey);
-                    await SaveIndexNameKeysAsync();
+                    await SaveIndexNameKeysAsync().ConfigureAwait(false);
                 }
                 tempTableEntity.RowKey = partitionSchema.GetRowKeyFromCriteria(tempTableEntity.DomainObjectInstance);
 
@@ -316,7 +318,7 @@ namespace Hallmanac.AzureCloudTable.API
 
         private async Task SaveIndexNameKeysAsync()
         {
-            await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntityWrapper);
+            await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntityWrapper).ConfigureAwait(false);
         }
 
 
@@ -338,14 +340,11 @@ namespace Hallmanac.AzureCloudTable.API
 
         private async Task ExecuteTableOperationAsync(IEnumerable<TDomainEntity> domainEntities, SaveType batchOperation)
         {
-            await VerifyAllPartitionsExistAsync();
-            await RunTableIndexingAsync();
-            foreach (var tempTableEntity in domainEntities.Select(domainEntity => new TableEntityWrapper<TDomainEntity>
+            await VerifyAllPartitionsExistAsync().ConfigureAwait(false);
+            await RunTableIndexingAsync().ConfigureAwait(false);
+            foreach (var tempTableEntity in domainEntities.Select(domainEntity => new TableEntityWrapper<TDomainEntity>{DomainObjectInstance = domainEntity}))
             {
-                DomainObjectInstance = domainEntity
-            }))
-            {
-                await ValidateTableEntityAgainstIndexDefinitionsAsync(tempTableEntity);
+                await ValidateTableEntityAgainstIndexDefinitionsAsync(tempTableEntity).ConfigureAwait(false);
             }
             WriteIndexDefinitionsToTable(batchOperation);
         }
@@ -366,13 +365,13 @@ namespace Hallmanac.AzureCloudTable.API
 
         private async Task ExecuteTableOperationAsync(TDomainEntity domainEntity, SaveType batchOperation)
         {
-            await VerifyAllPartitionsExistAsync();
-            await RunTableIndexingAsync();
+            await VerifyAllPartitionsExistAsync().ConfigureAwait(false);
+            await RunTableIndexingAsync().ConfigureAwait(false);
             var tempTableEntity = new TableEntityWrapper<TDomainEntity>
             {
                 DomainObjectInstance = domainEntity
             };
-            await ValidateTableEntityAgainstIndexDefinitionsAsync(tempTableEntity);
+            await ValidateTableEntityAgainstIndexDefinitionsAsync(tempTableEntity).ConfigureAwait(false);
             await WriteIndexDefinitionsToTableAsync(batchOperation).ConfigureAwait(false);
         }
 
@@ -422,7 +421,7 @@ namespace Hallmanac.AzureCloudTable.API
             }
             if (shouldWriteToTable)
             {
-                await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntityWrapper);
+                await _tableMetaDataContext.InsertOrReplaceAsync(_partitionMetaDataEntityWrapper).ConfigureAwait(false);
             }
         }
 
@@ -448,11 +447,11 @@ namespace Hallmanac.AzureCloudTable.API
             {
                 return;
             }
-            var defaultPartitionEntities = await GetAllAsync();
+            var defaultPartitionEntities = await GetAllAsync().ConfigureAwait(false);
             _needToRunTableIndices = false;
             if (defaultPartitionEntities.Count > 1)
             {
-                await SaveAsync(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace);
+                await SaveAsync(defaultPartitionEntities.ToArray(), SaveType.InsertOrReplace).ConfigureAwait(false);
             }
         }
 
@@ -470,7 +469,8 @@ namespace Hallmanac.AzureCloudTable.API
                             TableOperationsService.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.InsertOrMerge:
-                            // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
+                            // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways. A merge
+                            // is used for updating properties that have changed on the Azure Table
                             TableOperationsService.InsertOrReplace(entitiesArray);
                             break;
                         case SaveType.Insert:
@@ -493,6 +493,8 @@ namespace Hallmanac.AzureCloudTable.API
 
         private async Task WriteIndexDefinitionsToTableAsync(SaveType batchOperation)
         {
+            // Iterate through the index definitions and save all the cloud table entities that are in each index -- This was built up
+            // from other methods that came from a call to save the entities
             for (var i = 0; i < IndexDefinitions.Count; i++)
             {
                 var indexDefinition = IndexDefinitions[i];
@@ -502,20 +504,20 @@ namespace Hallmanac.AzureCloudTable.API
                     switch (batchOperation)
                     {
                         case SaveType.InsertOrReplace:
-                            await TableOperationsService.InsertOrReplaceAsync(entitiesArray);
+                            await TableOperationsService.InsertOrReplaceAsync(entitiesArray).ConfigureAwait(false);
                             break;
                         case SaveType.InsertOrMerge:
                             // Even if the client calls for a merge we need to replace since the whole object is being serialized anyways.
-                            await TableOperationsService.InsertOrReplaceAsync(entitiesArray);
+                            await TableOperationsService.InsertOrReplaceAsync(entitiesArray).ConfigureAwait(false);
                             break;
                         case SaveType.Insert:
-                            await TableOperationsService.InsertAsync(entitiesArray);
+                            await TableOperationsService.InsertAsync(entitiesArray).ConfigureAwait(false);
                             break;
                         case SaveType.Replace:
-                            await TableOperationsService.ReplaceAsync(entitiesArray);
+                            await TableOperationsService.ReplaceAsync(entitiesArray).ConfigureAwait(false);
                             break;
                         case SaveType.Delete:
-                            await TableOperationsService.DeleteAsync(entitiesArray);
+                            await TableOperationsService.DeleteAsync(entitiesArray).ConfigureAwait(false);
                             break;
                     }
                 }
@@ -557,7 +559,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task SaveAsync(TDomainEntity domainEntity, SaveType typeOfSave)
         {
-            await ExecuteTableOperationAsync(domainEntity, typeOfSave);
+            await ExecuteTableOperationAsync(domainEntity, typeOfSave).ConfigureAwait(false);
         }
 
 
@@ -570,7 +572,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task SaveAsync(IEnumerable<TDomainEntity> domainEntities, SaveType typeOfSave)
         {
-            await ExecuteTableOperationAsync(domainEntities, typeOfSave);
+            await ExecuteTableOperationAsync(domainEntities, typeOfSave).ConfigureAwait(false);
         }
 
 
@@ -688,6 +690,19 @@ namespace Hallmanac.AzureCloudTable.API
 
 
         /// <summary>
+        /// Deletes all instances from a particular index. Under the hood this is deleting everything inside
+        /// a Table Partition.
+        /// </summary>
+        /// <param name="indexNameKey"></param>
+        /// <returns></returns>
+        public async Task DeleteAllItemsFromIndexAsync(string indexNameKey)
+        {
+            var entities = await TableOperationsService.GetByPartitionKeyAsync(indexNameKey).ConfigureAwait(false);
+            await TableOperationsService.DeleteAsync(entities.ToArray()).ConfigureAwait(false);
+        }
+
+
+        /// <summary>
         /// Executes a single "Replace" table operation.
         /// </summary>
         /// <param name="domainEntity"></param>
@@ -718,8 +733,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TDomainEntity> GetAll()
         {
-            return TableOperationsService.GetByPartitionKey(_defaultIndexDefinitionName)
-                                     .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
+            return TableOperationsService.GetByPartitionKey(_defaultIndexDefinitionName).Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
 
@@ -730,7 +744,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task<List<TDomainEntity>> GetAllAsync()
         {
-            var partition = await TableOperationsService.GetByPartitionKeyAsync(_defaultIndexDefinitionName);
+            var partition = await TableOperationsService.GetByPartitionKeyAsync(_defaultIndexDefinitionName).ConfigureAwait(false);
             return partition.Select(cte => cte.DomainObjectInstance).ToList();
         }
 
@@ -776,7 +790,7 @@ namespace Hallmanac.AzureCloudTable.API
             {
                 indexNameKey = DefaultIndex.IndexNameKey;
             }
-            var tableEntity = await TableOperationsService.FindAsync(indexNameKey, serializedEntityId);
+            var tableEntity = await TableOperationsService.FindAsync(indexNameKey, serializedEntityId).ConfigureAwait(false);
             return tableEntity.DomainObjectInstance;
         }
 
@@ -790,14 +804,10 @@ namespace Hallmanac.AzureCloudTable.API
         {
             if (indexKey is string key)
             {
-                return
-                    TableOperationsService.GetByPartitionKey(key)
-                                      .Select(tableEntity => tableEntity.DomainObjectInstance);
+                return TableOperationsService.GetByPartitionKey(key).Select(tableEntity => tableEntity.DomainObjectInstance);
             }
             var serializedPartitionKey = JsonConvert.SerializeObject(indexKey);
-            return
-                TableOperationsService.GetByPartitionKey(serializedPartitionKey)
-                                  .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
+            return TableOperationsService.GetByPartitionKey(serializedPartitionKey).Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
 
@@ -810,11 +820,11 @@ namespace Hallmanac.AzureCloudTable.API
         {
             if (indexKey is string key)
             {
-                var entities = await TableOperationsService.GetByPartitionKeyAsync(key);
+                var entities = await TableOperationsService.GetByPartitionKeyAsync(key).ConfigureAwait(false);
                 return entities.Select(tableEntity => tableEntity.DomainObjectInstance).ToList();
             }
             var serializedPartitionKey = JsonConvert.SerializeObject(indexKey);
-            var ents = await TableOperationsService.GetByPartitionKeyAsync(serializedPartitionKey);
+            var ents = await TableOperationsService.GetByPartitionKeyAsync(serializedPartitionKey).ConfigureAwait(false);
             return ents.Select(azureTableEntity => azureTableEntity.DomainObjectInstance).ToList();
         }
 
@@ -830,9 +840,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public IEnumerable<TDomainEntity> GetFromIndexWithinValueRange(string indexNameKey, string minIndexedValue = "", string maxIndexedValue = "")
         {
-            return
-                TableOperationsService.GetByPartitionKeyWithRowKeyRange(indexNameKey, minIndexedValue, maxIndexedValue)
-                                  .Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
+            return TableOperationsService.GetByPartitionKeyWithRowKeyRange(indexNameKey, minIndexedValue, maxIndexedValue).Select(azureTableEntity => azureTableEntity.DomainObjectInstance);
         }
 
 
@@ -845,11 +853,9 @@ namespace Hallmanac.AzureCloudTable.API
         /// <param name="minIndexedValue">Optional minimum value of the index</param>
         /// <param name="maxIndexedValue">Optional maximum value of the index</param>
         /// <returns></returns>
-        public async Task<List<TDomainEntity>> GetFromIndexWithinValueRangeAsync(string indexNameKey,
-                                                                                 string minIndexedValue = "",
-                                                                                 string maxIndexedValue = "")
+        public async Task<List<TDomainEntity>> GetFromIndexWithinValueRangeAsync(string indexNameKey, string minIndexedValue = "", string maxIndexedValue = "")
         {
-            var entites = await TableOperationsService.GetByPartitionKeyWithRowKeyRangeAsync(indexNameKey, minIndexedValue, maxIndexedValue);
+            var entites = await TableOperationsService.GetByPartitionKeyWithRowKeyRangeAsync(indexNameKey, minIndexedValue, maxIndexedValue).ConfigureAwait(false);
             return entites.Select(ent => ent.DomainObjectInstance).ToList();
         }
 
@@ -870,9 +876,8 @@ namespace Hallmanac.AzureCloudTable.API
                 }
             };
             var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
-            return TableOperationsService.QueryWherePropertyEquals(indexNameKey,
-                                                               CtConstants.PropNameIndexedProperty, serializedIndexedProperty)
-                                     .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
+            return TableOperationsService.QueryWherePropertyEquals(indexNameKey, CtConstants.PropNameIndexedProperty, serializedIndexedProperty)
+                                          .Select(cloudTableEntity => cloudTableEntity.DomainObjectInstance);
         }
 
 
@@ -893,8 +898,7 @@ namespace Hallmanac.AzureCloudTable.API
             };
             var serializedIndexedProperty = JsonConvert.SerializeObject(tempCloudTableEntity.IndexedProperty);
             var entities =
-                await TableOperationsService.QueryWherePropertyEqualsAsync(indexDefinitionName, CtConstants.PropNameIndexedProperty,
-                                                                       serializedIndexedProperty);
+                await TableOperationsService.QueryWherePropertyEqualsAsync(indexDefinitionName, CtConstants.PropNameIndexedProperty, serializedIndexedProperty).ConfigureAwait(false);
             return entities.Select(cte => cte.DomainObjectInstance).ToList();
         }
 
