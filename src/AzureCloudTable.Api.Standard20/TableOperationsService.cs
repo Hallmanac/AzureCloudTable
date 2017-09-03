@@ -70,23 +70,29 @@ namespace Hallmanac.AzureCloudTable.API
 
         private void InitConstructor(CloudStorageAccount storageAccount, string tableName = null)
         {
-            TableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
+            _tableName = tableName;
             TableServicePoint = ServicePointManager.FindServicePoint(storageAccount.TableEndpoint);
             TableServicePoint.UseNagleAlgorithm = false;
             TableServicePoint.Expect100Continue = false;
             TableServicePoint.ConnectionLimit = 1000;
             UseBackgroundTaskForIndexing = false;
             TableClient = storageAccount.CreateCloudTableClient();
-
-            // I truly hate calling an async method inside the constructor like this but I'm afraid that it's the only place where I can 
-            // create the table to guarantee that it exists when someone accesses it from the Table property in this class
-            Table.CreateIfNotExistsAsync().WaitAndUnwrapException();
         }
 
         /// <summary>
         /// Name of table in Azure Table Storage
         /// </summary>
-        public string TableName { get; private set; }
+        public string TableName
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(_tableName))
+                    return _tableName;
+                _tableName = _encoder.CleanTableNameOfInvalidCharacters($"{typeof(TAzureTableEntity).Name}Table");
+                return _tableName;
+            }
+        }
+        private string _tableName;
 
         /// <summary>
         /// The CloudTableClient object that is used to connect to the current table.
@@ -97,7 +103,18 @@ namespace Hallmanac.AzureCloudTable.API
         /// Gets the current Azure Table being accessed. This is a property expression so it returns a new instance of the
         /// CloudTable class each time this property is accessed
         /// </summary>
-        public CloudTable Table => TableClient.GetTableReference(TableName);
+        public CloudTable Table
+        {
+            get
+            {
+                if (_table != null)
+                    return _table;
+                _table = TableClient.GetTableReference(TableName);
+                _table.CreateIfNotExistsAsync().WaitAndUnwrapException();
+                return _table;
+            }
+        }
+        private CloudTable _table;
 
         /// <summary>
         /// Provides connection management for HTTP connections. We use this to set connection properties to optimize the 
@@ -135,7 +152,7 @@ namespace Hallmanac.AzureCloudTable.API
             tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
             tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var updateOperation = TableOperation.InsertOrMerge(tableEntity);
-            await Table.ExecuteAsync(updateOperation);
+            await Table.ExecuteAsync(updateOperation).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -184,7 +201,7 @@ namespace Hallmanac.AzureCloudTable.API
             tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
             tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             var updateOperation = TableOperation.InsertOrReplace(tableEntity);
-            await Table.ExecuteAsync(updateOperation);
+            await Table.ExecuteAsync(updateOperation).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -208,7 +225,7 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task InsertOrReplaceAsync(TAzureTableEntity[] entities)
         {
-            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpInsertOrReplace).ConfigureAwait(false);
+           await ExecuteBatchOperationAsync(entities, CtConstants.TableOpInsertOrReplace).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -267,10 +284,7 @@ namespace Hallmanac.AzureCloudTable.API
         [Obsolete("Be advised that the Azure Storage API for Net Standard and NET Core no longer supports regular synchronous methods. This method is merely wrapping an async call and blocking while waiting.")]
         public void Delete(TAzureTableEntity tableEntity)
         {
-            tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
-            tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
-            var deleteOperation = TableOperation.Delete(tableEntity);
-            Table.ExecuteAsync(deleteOperation).WaitAndUnwrapException();
+            DeleteAsync(tableEntity).WaitAndUnwrapException();
         }
 
         /// <summary>
@@ -280,6 +294,8 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task DeleteAsync(TAzureTableEntity tableEntity)
         {
+            // Unfortunately Azure Table storage is not smart enough to handle deletes when the entity does not exist so we have to make sure it exists via a try/catch
+
             tableEntity.PartitionKey = _encoder.EncodeTableKey(tableEntity.PartitionKey);
             tableEntity.RowKey = _encoder.EncodeTableKey(tableEntity.RowKey);
             tableEntity.ETag = "*";
@@ -307,9 +323,7 @@ namespace Hallmanac.AzureCloudTable.API
         [Obsolete("Be advised that the Azure Storage API for Net Standard and NET Core no longer supports regular synchronous methods. This method is merely wrapping an async call and blocking while waiting.")]
         public void Delete(TAzureTableEntity[] entities)
         {
-            // Unfortunately Azure Table storage is not smart enough to handle deletes when the entity does not exist so we have to make sure it exists
-            InsertOrReplace(entities);
-            ExecuteBatchOperationAsync(entities, CtConstants.TableOpDelete).WaitAndUnwrapException();
+            DeleteAsync(entities).WaitAndUnwrapException();
         }
 
         /// <summary>
@@ -320,9 +334,17 @@ namespace Hallmanac.AzureCloudTable.API
         /// <returns></returns>
         public async Task DeleteAsync(TAzureTableEntity[] entities)
         {
-            // Unfortunately Azure Table storage is not smart enough to handle deletes when the entity does not exist so we have to make sure it exists
-            await InsertOrReplaceAsync(entities).ConfigureAwait(false);
-            await ExecuteBatchOperationAsync(entities, CtConstants.TableOpDelete).ConfigureAwait(false);
+            var batchedEntities = entities.ToList().ToBatch(100);
+            foreach (var entityBatch in batchedEntities)
+            {
+                var allTasks = new List<Task>();
+                foreach (var item in entityBatch)
+                {
+                    var task = DeleteAsync(item);
+                    allTasks.Add(task);
+                }
+                await Task.WhenAll(allTasks).ConfigureAwait(false);
+            }
         }
 
         /// <summary>
@@ -398,9 +420,24 @@ namespace Hallmanac.AzureCloudTable.API
             // Iterating through the batch key-value pairs and executing the batch one partition at a time.
             foreach (var pair in batchPartitionPairs)
             {
-                var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName, _encoder);
-                var batchTasks = entityBatch.BatchList.Select(batchOp => Table.ExecuteBatchAsync(batchOp));
-                await Task.WhenAll(batchTasks).ConfigureAwait(false);
+                try
+                {
+                    var entityBatch = new EntityBatch(pair.Value.ToArray(), batchMethodName, _encoder);
+                    var batchTasks = entityBatch.BatchList.Select(batchOp => Table.ExecuteBatchAsync(batchOp));
+                    await Task.WhenAll(batchTasks).ConfigureAwait(false);
+                }
+                catch(StorageException e)
+                {
+                    if (e.RequestInformation.HttpStatusCode == (int)HttpStatusCode.NotFound)
+                    {
+                        continue;
+                    }
+                    throw;
+                }
+                catch (Exception)
+                {
+                    throw;
+                }
             }
         }
         #endregion Writes

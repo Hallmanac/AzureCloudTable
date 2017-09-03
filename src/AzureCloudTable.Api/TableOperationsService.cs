@@ -70,23 +70,29 @@ namespace Hallmanac.AzureCloudTable.API
 
         private void InitConstructor(CloudStorageAccount storageAccount, string tableName = null)
         {
-            TableName = string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TAzureTableEntity).Name}Table" : tableName;
+            _tableName = tableName;
             TableServicePoint = ServicePointManager.FindServicePoint(storageAccount.TableEndpoint);
             TableServicePoint.UseNagleAlgorithm = false;
             TableServicePoint.Expect100Continue = false;
             TableServicePoint.ConnectionLimit = 1000;
             UseBackgroundTaskForIndexing = false;
             TableClient = storageAccount.CreateCloudTableClient();
-
-            // I truly hate calling an async method inside the constructor like this but I'm afraid that it's the only place where I can 
-            // create the table to guarantee that it exists when someone accesses it from the Table property in this class
-            Table.CreateIfNotExists();
         }
 
         /// <summary>
         /// Name of table in Azure Table Storage
         /// </summary>
-        public string TableName { get; private set; }
+        public string TableName
+        {
+            get
+            {
+                if (!string.IsNullOrWhiteSpace(_tableName))
+                    return _tableName;
+                _tableName = _encoder.CleanTableNameOfInvalidCharacters($"{typeof(TAzureTableEntity).Name}Table");
+                return _tableName;
+            }
+        }
+        private string _tableName;
 
         /// <summary>
         /// The CloudTableClient object that is used to connect to the current table.
@@ -96,7 +102,18 @@ namespace Hallmanac.AzureCloudTable.API
         /// <summary>
         /// Gets the current Azure Table being accessed.
         /// </summary>
-        public CloudTable Table { get; private set; }
+        public CloudTable Table
+        {
+            get
+            {
+                if (_table != null)
+                    return _table;
+                _table = TableClient.GetTableReference(TableName);
+                _table.CreateIfNotExists();
+                return _table;
+            }
+        }
+        private CloudTable _table;
 
         /// <summary>
         /// Provides connection management for HTTP connections. We use this to set connection properties to optimize the 
@@ -925,19 +942,6 @@ namespace Hallmanac.AzureCloudTable.API
         #endregion
 
         #endregion
-
-        private void InitTableAccess(CloudStorageAccount storageAccount, string tableName)
-        {
-            _storageAccount = storageAccount;
-            TableServicePoint = ServicePointManager.FindServicePoint(_storageAccount.TableEndpoint);
-            TableServicePoint.UseNagleAlgorithm = false;
-            TableServicePoint.Expect100Continue = false;
-            TableServicePoint.ConnectionLimit = 1000;
-            UseBackgroundTaskForIndexing = false;
-            var tableClient = storageAccount.CreateCloudTableClient();
-            Table = tableClient.GetTableReference(tableName);
-            Table.CreateIfNotExists();
-        }
 
         internal class EntityBatch
         {
