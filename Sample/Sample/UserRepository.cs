@@ -79,6 +79,20 @@ namespace Sample
         }
 
 
+        public void DeleteUsers(List<User> users)
+        {
+            UserContext.Delete(users.ToArray());
+        }
+
+
+        public void DeleteAllUsers()
+        {
+            var users = GetAllUsersAsync().Result;
+            UserContext.Delete(users.ToArray());
+            UserContext.DeleteAllItemsFromIndexAsync(_userVersionIndex.IndexNameKey).Wait();
+        }
+
+
         /// <summary>
         /// The index definitions are how your domain object gets sorted/categorized/grouped inside Azure Table
         /// storage. You create them in your client code and then "add" them to the TableContext class that you're using 

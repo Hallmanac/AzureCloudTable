@@ -209,8 +209,10 @@ namespace Sample
             var shouldDeleteAnswer = Console.ReadLine();
             if (string.Equals(shouldDeleteAnswer, "y", StringComparison.CurrentCultureIgnoreCase))
             {
+                var allUsers = existingUsers.ToList();
+                allUsers.AddRange(listOfUsers);
                 sw.Start();
-                userRepo.UserContext.Delete(existingUsers.ToArray());
+                userRepo.DeleteAllUsers();//UserContext.Delete(allUsers.ToArray());
                 sw.Stop();
                 Console.WriteLine("Deleted all users");
                 Console.WriteLine($"Time taken was {sw.ElapsedMilliseconds}");
