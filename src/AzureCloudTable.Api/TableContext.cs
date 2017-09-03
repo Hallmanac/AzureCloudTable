@@ -26,6 +26,7 @@ namespace Hallmanac.AzureCloudTable.API
         private string _defaultIndexDefinitionName;
         private bool _needToRunTableIndices;
         private TableEntityWrapper<PartitionMetaData> _partitionMetaDataEntityWrapper;
+        private readonly TableKeyEncoder _encoder = new TableKeyEncoder();
 
 
         /// <summary>
@@ -37,8 +38,11 @@ namespace Hallmanac.AzureCloudTable.API
         {
             if (string.IsNullOrWhiteSpace(nameOfEntityIdProperty))
                 throw new ArgumentNullException(nameof(nameOfEntityIdProperty));
+
+            // Need to make sure that the table name is for the domain type and not the TableEntityWrapper type
+            var tn = _encoder.CleanTableNameOfInvalidCharacters(string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TDomainEntity).Name}Table" : tableName);
             NameOfEntityIdProperty = nameOfEntityIdProperty;
-            TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(storageAccount, tableName);
+            TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(storageAccount, tn);
             _tableMetaDataContext = new TableOperationsService<TableEntityWrapper<PartitionMetaData>>(storageAccount, TableOperationsService.TableName);
             LoadTableMetaData();
         }
@@ -53,8 +57,11 @@ namespace Hallmanac.AzureCloudTable.API
         {
             if (string.IsNullOrWhiteSpace(nameOfEntityIdProperty))
                 throw new ArgumentNullException(nameof(nameOfEntityIdProperty));
+
+            // Need to make sure that the table name is for the domain type and not the TableEntityWrapper type
+            var tn = _encoder.CleanTableNameOfInvalidCharacters(string.IsNullOrWhiteSpace(tableName) ? $"{typeof(TDomainEntity).Name}Table" : tableName);
             NameOfEntityIdProperty = nameOfEntityIdProperty;
-            TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(connectionString, tableName);
+            TableOperationsService = new TableOperationsService<TableEntityWrapper<TDomainEntity>>(connectionString, tn);
             _tableMetaDataContext = new TableOperationsService<TableEntityWrapper<PartitionMetaData>>(connectionString, TableOperationsService.TableName);
             LoadTableMetaData();
         }

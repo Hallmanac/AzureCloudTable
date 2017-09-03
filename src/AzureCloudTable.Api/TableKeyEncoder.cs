@@ -68,6 +68,30 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
 
+        public string CleanTableNameOfInvalidCharacters(string tableName)
+        {
+            if (string.IsNullOrWhiteSpace(tableName))
+            {
+                throw new ArgumentNullException("The table name cannot be null or empty", nameof(tableName));
+            }
+
+            var tableNameChars = tableName.ToCharArray();
+            var sb = new StringBuilder();
+            foreach (var c in tableNameChars)
+            {
+                var isDigit = char.IsDigit(c);
+                var cNumber = (int)c;
+                var isLetter = (cNumber > 64 && cNumber < 91) || (cNumber > 96 && cNumber < 123);
+                if (isDigit || isLetter)
+                {
+                    sb.Append(c);
+                }
+            }
+            var result = sb.ToString();
+            return result;
+        }
+
+
         /// <summary>
         /// Decodes a string from a custom encoding for an Azure Table key.
         /// <para>
