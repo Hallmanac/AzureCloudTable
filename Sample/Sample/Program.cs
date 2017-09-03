@@ -190,21 +190,7 @@ namespace Sample
             sw.Reset();
             Console.WriteLine("\nPress any key to continue...");
             Console.ReadLine();
-            Console.WriteLine("Getting versions for Jennifer Admin...");
-            sw.Start();
-            var jenniferUser = userRepo.GetUsersByFirstName("Jennifer");
-            var listOfJenniferVersions = new List<User>();
-            if(jenniferUser != null)
-            {
-                foreach (var userVersion in userRepo.GetAllVersions(jenniferUser.FirstOrDefault()))
-                {
-                    listOfJenniferVersions.Add(userVersion);
-                }
-            }
-            sw.Stop();
-            Console.WriteLine("All Versions of Jenfer Admin...\n{0}", JsonConvert.SerializeObject(listOfJenniferVersions, Formatting.Indented));
-            Console.WriteLine("Time taken was {0} milliseconds.", sw.ElapsedMilliseconds);
-            sw.Reset();
+            
             Console.WriteLine("Would you like to delete all the test data? -  y or n");
             var shouldDeleteAnswer = Console.ReadLine();
             if (string.Equals(shouldDeleteAnswer, "y", StringComparison.CurrentCultureIgnoreCase))

@@ -74,8 +74,7 @@ namespace Sample
 
         public IEnumerable<User> GetAllVersions(User givenUser)
         {
-            return UserContext.GetByIndexedProperty(_userVersionIndex.IndexNameKey,
-                                                    _userVersionIndex.GetIndexedPropertyFromCriteria(givenUser));
+            return UserContext.GetByIndexedProperty(_userVersionIndex.IndexNameKey, _userVersionIndex.GetIndexedPropertyFromCriteria(givenUser));
         }
 
 
