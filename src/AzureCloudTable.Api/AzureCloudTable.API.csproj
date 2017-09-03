@@ -63,6 +63,7 @@
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="ListExtensions.cs" />
     <Compile Include="TableEntityWrapper.cs" />
     <Compile Include="CtConstants.cs" />
     <Compile Include="IndexedObject.cs" />
