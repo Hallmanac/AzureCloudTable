@@ -210,14 +210,8 @@ namespace Hallmanac.AzureCloudTable.API
                     {
                         metaDataPkIsInList = true;
                     }
-                    var isInList = false;
-                    foreach (var item in IndexNameKeysInTable)
-                    {
-                        if (item == partitionKeyString)
-                        {
-                            isInList = true;
-                        }
-                    }
+                    var isInList = IndexNameKeysInTable.Contains(partitionKeyString);
+                    
                     if (!isInList)
                     {
                         IndexNameKeysInTable.Add(partitionKeyString);
