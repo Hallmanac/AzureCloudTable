@@ -1,8 +1,7 @@
-﻿using Hallmanac.AzureCloudTable.API;
-
+using Hallmanac.AzureCloudTable.API;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace AzureCloudTable.Tests
+namespace AzureCloudTable.NetCore.Tests
 {
     [TestClass]
     public class TableKeyEncoderTests
