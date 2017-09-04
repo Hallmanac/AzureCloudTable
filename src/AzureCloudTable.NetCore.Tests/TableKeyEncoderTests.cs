@@ -150,5 +150,18 @@ namespace AzureCloudTable.NetCore.Tests
 
             Assert.AreEqual(manualEncoding, encodedString);
         }
+
+
+        [TestMethod]
+        public void CleanTableName_Should_Not_Return_String_With_More_Than_63_Characters()
+        {
+            var encoder = new TableKeyEncoder();
+            const string testTableName = "Roof party aesthetic echo park beard seitan. Tote bag gastropub umami, edison occupy cred lomo";
+            const string expected = "RoofpartyaestheticechoparkbeardseitanTotebaggastropubumamiediso";
+            var actual = encoder.CleanTableNameOfInvalidCharacters(testTableName);
+
+            Assert.IsTrue(actual.Length < 64);
+            Assert.AreEqual(expected, actual);
+        }
     }
 }
