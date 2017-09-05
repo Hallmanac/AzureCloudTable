@@ -68,11 +68,18 @@ namespace Hallmanac.AzureCloudTable.API
         }
 
 
+        /// <summary>
+        /// Cleans the given string to be compatible for a Table name in Azure Table Storage.
+        /// </summary>
+        /// <param name="tableName"></param>
+        /// <returns></returns>
         public string CleanTableNameOfInvalidCharacters(string tableName)
         {
-            if (string.IsNullOrWhiteSpace(tableName))
+            const int minLengthOfTableName = 3;
+            const int maxLengthOfTableName = 63;
+            if (string.IsNullOrWhiteSpace(tableName) || tableName.Length < minLengthOfTableName)
             {
-                throw new ArgumentNullException("The table name cannot be null or empty", nameof(tableName));
+                throw new ArgumentNullException("The table name cannot be null or empty or less than 3 characters", nameof(tableName));
             }
 
             var tableNameChars = tableName.ToCharArray();
@@ -82,7 +89,7 @@ namespace Hallmanac.AzureCloudTable.API
                 var isDigit = char.IsDigit(c);
                 var cNumber = (int)c;
                 var isLetter = (cNumber > 64 && cNumber < 91) || (cNumber > 96 && cNumber < 123);
-                if (isDigit || isLetter)
+                if ((isDigit || isLetter) && sb.Length < maxLengthOfTableName)
                 {
                     sb.Append(c);
                 }
